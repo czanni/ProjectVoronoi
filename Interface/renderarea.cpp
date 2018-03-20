@@ -143,7 +143,41 @@ void RenderArea::drawGraph(Graph &graph, QPainter &painter){
         }
         index++;
     }
+
+    painter.setPen(QPen(Qt::black, 5));
     painter.drawPoints(pointsF.data(), pointsF.size());
+    painter.setPen(QPen(Qt::blue, 3));
+}
+
+void RenderArea::drawGraphV(Graph &graph, QPainter &painter){
+    //Conversion des points pour l'affichage
+    std::vector <QPointF> pointsF = ConvertVec2toQPointF(graph.getPoints());
+
+    int index = 0;
+    foreach(const std::vector<int>& connexion, graph.getConnexions()){
+        foreach(int i, connexion){
+            painter.drawLine(pointsF[i], pointsF[index]);
+        }
+        index++;
+    }
+    for (int i=0;i<pointsF.size();++i) {
+        if (graph.getStatus(i)==treatment::inside) {
+            painter.setPen(QPen(Qt::red, 5));
+            painter.drawPoint(pointsF[i]);
+            painter.setPen(QPen(Qt::green, 3));
+        }
+        else if (graph.getStatus(i)==treatment::outside) {
+            painter.setPen(QPen(Qt::cyan, 5));
+            painter.drawPoint(pointsF[i]);
+            painter.setPen(QPen(Qt::green, 3));
+        }
+        else if (graph.getStatus(i)==treatment::unknown) {
+            painter.setPen(QPen(Qt::black, 5));
+            painter.drawPoint(pointsF[i]);
+            painter.setPen(QPen(Qt::green, 3));
+        }
+    }
+
 }
 
 void RenderArea::voronoiDiagram(){
@@ -153,6 +187,7 @@ void RenderArea::voronoiDiagram(){
     else{
         VoronoiInterieur = *GraphMaker::extractVoronoi(ContoursInterieur);
     }
+    ContoursExterieur = *GraphMaker::makeMorePoints(ContoursExterieur);
     update();
 }
 
@@ -168,7 +203,7 @@ void RenderArea::paintEvent(QPaintEvent * /* event */)
 
     //Le diagramme de Voronoi du contours extérieur en vert
     painter.setPen(QPen(Qt::green, 3));
-    drawGraph(VoronoiExterieur, painter);
+    drawGraphV(VoronoiExterieur, painter);
 
     //Le contour intérieur en noir
     painter.setPen(QPen(Qt::black, 3));

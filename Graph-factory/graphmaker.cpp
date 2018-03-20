@@ -80,55 +80,47 @@ std::unique_ptr<Graph> makeMorePoints(Graph &inputGraph, float step) {
     std::set<std::pair<int, int>> visitedEdges;
     auto out = std::make_unique<Graph>();
     int currentVertex = 0;
-    float distFromCurrentPoint=0;
-    float distFromConnectedVertex=0;
-    GEO::vec2 direction;
     int nextVertex = inputGraph.directAdjacency(currentVertex)[0];
 
     //We compute the distance we went from the point on border, then we compare it to the distance to the point adjacent to this one.
     //Since we go in the same direction, if the distance squared is greater, then we went too far and must change vertex.
 
-    distFromConnectedVertex = distance(inputGraph.getPointCoordinate(currentVertex), inputGraph.getPointCoordinate(nextVertex));
-    direction = (inputGraph.getPointCoordinate(nextVertex) - inputGraph.getPointCoordinate(currentVertex))/std::sqrt(distFromConnectedVertex);
 
     while (visitedEdges.find(std::make_pair(currentVertex, nextVertex)) == visitedEdges.end()) {
 
         //Three cases : if we are in the first iteration of the point, we simply add the point the the new graph
-        if (distFromCurrentPoint==(float) 0) {
-            out -> addPoint(inputGraph.getPointCoordinate(currentVertex));
-            distFromCurrentPoint+=step;
-        }
+
+        out -> addPoint(inputGraph.getPointCoordinate(currentVertex));
+        float distFromConnectedVertex = distance(inputGraph.getPointCoordinate(currentVertex), inputGraph.getPointCoordinate(nextVertex));
+        GEO::vec2 direction = (inputGraph.getPointCoordinate(nextVertex) - inputGraph.getPointCoordinate(currentVertex));
+
         //If we moved, we check the distance to the current point, to see if we aren't farther away than needed
-        else if (pow(distFromCurrentPoint,2) < distFromConnectedVertex) {
-            out -> addPoint(inputGraph.getPointCoordinate(currentVertex) + direction*distFromCurrentPoint);
-            distFromCurrentPoint+=step;
+
+        int nStep = 15; //TODO:20.03 ajuster le nStep pour mettre une densité linéique de points
+
+        for (int k=1;k<nStep;++k) {
+            out -> addPoint(inputGraph.getPointCoordinate(currentVertex) + direction*((float) k / (float) nStep));
+
         }
         //If we are too far, we change point. Since we need to always turn in the same direction, and points are disorganized, we need to check which direction
         // is the right one, of course for the first point, the direction will be random.
-        else {
 
-            visitedEdges.emplace(currentVertex, nextVertex);
-            visitedEdges.emplace(nextVertex, currentVertex);
+        visitedEdges.emplace(currentVertex, nextVertex);
+        visitedEdges.emplace(nextVertex, currentVertex);
 
-            if (visitedEdges.find(std::make_pair( nextVertex, inputGraph.directAdjacency(nextVertex)[0])) == visitedEdges.end()) {
-                //Change of points
-                currentVertex = nextVertex;
-                nextVertex = inputGraph.directAdjacency(nextVertex)[0];
-                //Refresh the data used
-                distFromCurrentPoint = 0;
-                distFromConnectedVertex = distance(inputGraph.getPointCoordinate(currentVertex), inputGraph.getPointCoordinate(nextVertex));
-                direction = (inputGraph.getPointCoordinate(nextVertex) - inputGraph.getPointCoordinate(currentVertex))/distFromConnectedVertex;
+        if (visitedEdges.find(std::make_pair( nextVertex, inputGraph.directAdjacency(nextVertex)[0])) == visitedEdges.end()) {
+            //Change of points
+            currentVertex = nextVertex;
+            nextVertex = inputGraph.directAdjacency(nextVertex)[0];
+            //Refresh the data used
 
-            }
-            //Same here.
-            else if (visitedEdges.find(std::make_pair( nextVertex, inputGraph.directAdjacency(nextVertex)[1])) == visitedEdges.end()) {
-                currentVertex = nextVertex;
-                nextVertex = inputGraph.directAdjacency(nextVertex)[1];
-                distFromCurrentPoint = 0;
-                distFromConnectedVertex = distance(inputGraph.getPointCoordinate(currentVertex), inputGraph.getPointCoordinate(nextVertex));
-                direction = (inputGraph.getPointCoordinate(nextVertex) - inputGraph.getPointCoordinate(currentVertex))/std::sqrt(distFromConnectedVertex);
-            }
         }
+        //Same here.
+        else if (visitedEdges.find(std::make_pair( nextVertex, inputGraph.directAdjacency(nextVertex)[1])) == visitedEdges.end()) {
+            currentVertex = nextVertex;
+            nextVertex = inputGraph.directAdjacency(nextVertex)[1];
+        }
+
 
     }
     for (int i=0;i<out -> getSize()-1;++i) {
@@ -137,6 +129,16 @@ std::unique_ptr<Graph> makeMorePoints(Graph &inputGraph, float step) {
     out -> addEdge({out->getSize()-1,0});
 
     return std::move(out);
+
+}
+
+bool isOut( const Graph& graph, index_t t, index_t e) {
+    index_t lv1 = (e+1)%3;
+    index_t lv2 = (e+2)%3;
+    index_t v1 = index_t(delaunay->cell_to_v()[3*t+lv1]);
+    index_t v2 = index_t(delaunay->cell_to_v()[3*t+lv2]);
+
+    return !(graph.existsEdge(v1,v2));
 
 }
 
@@ -149,7 +151,9 @@ std::unique_ptr<Graph> extractVoronoi(Graph &inputGraph_small, float step) {
 //    std::unique_ptr <Graph> voronoiGraph ;
     //Then, we call the function makeMorePoints to add the necessary points to be closest to the segment voronoi diagram.
 
-    Graph inputGraph = *makeMorePoints(inputGraph_small, step);
+    auto ptrGraph = makeMorePoints(inputGraph_small, step);
+    Graph& inputGraph = *ptrGraph;
+//    Graph inputGraph = *makeMorePoints(inputGraph_small, step);
 
 
     //return makeMorePoints(inputGraph_small, step);
@@ -173,9 +177,6 @@ std::unique_ptr<Graph> extractVoronoi(Graph &inputGraph_small, float step) {
         voronoiGraph -> addPoint(circumcenter(t));
         //Index in graph are the same as inb cell indexes in voronoi
     }
-
-
-
     //Then, we add the link corresponding to each cell
 
     for(index_t t=0; t<delaunay->nb_cells(); ++t) {
@@ -184,16 +185,23 @@ std::unique_ptr<Graph> extractVoronoi(Graph &inputGraph_small, float step) {
             signed_index_t t2 = delaunay->cell_to_cell()[3*t+e];
             if(t2 == -1) {
                 voronoiGraph -> addInfinite(t); //add to the infinite matrix the vertex connected to the inf vertex.
+                //TODO: évaluer quel edge rencontre un edge du graph donné en input et le stocker
+                if (isOut(inputGraph,t,e)) {
+                    voronoiGraph -> changeStatus(t,treatment::outside);
+                }
+                else {
+                    voronoiGraph -> changeStatus(t,treatment::inside);
+                }
+
             } else if(t2 >signed_index_t(t)) {
 
                 voronoiGraph ->addEdge({(int) t,(int)t2});
             }
         }
     }
-
     return std::move(voronoiGraph);
-
 }
+
 
 std::vector <bool> insideOutTable(Graph &inputGraph) {
 
@@ -330,13 +338,6 @@ void standardDepthFirstSearch(Graph &inputGraph, int firstVertex, TLambda &&proc
 }
 
 
-
-
-
-
-//    std::vector<bool> v_visited(inputGraph.getSize());
-
-
 vec2 infiniteVertex(index_t t, index_t e) {
     index_t lv1 = (e+1)%3;
     index_t lv2 = (e+2)%3;
@@ -349,6 +350,14 @@ vec2 infiniteVertex(index_t t, index_t e) {
     return 0.5*(p1+p2)+100000.0*n;
 
 }
+
+
+
+
+//    std::vector<bool> v_visited(inputGraph.getSize());
+
+
+
 
 
 

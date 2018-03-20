@@ -27,7 +27,10 @@ typedef GEO::vector<GEO::vec2> Polygon;
     GEO::vec2 circumcenter(GEO::index_t t) ;
     void initialize();
     std::unique_ptr<Graph> removeOutsidePoints(Graph &voronoiGraph);
-    std::unique_ptr <Graph> extractVoronoi(Graph &inputGraph, float step=10);
+    std::unique_ptr<Graph> makeMorePoints(Graph &inputGraph, float step=25);
+    std::unique_ptr <Graph> extractVoronoi(Graph &inputGraph, float step=25);
+
+
 
 
 }

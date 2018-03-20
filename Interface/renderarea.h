@@ -28,6 +28,7 @@ public slots:
     void setExterieurContoursBool(bool exterieurContoursBool);
     void linkPoints();
     void drawGraph(Graph &graph, QPainter &painter);
+    void drawGraphV(Graph &graph, QPainter &painter);
     void voronoiDiagram();
 
 protected:

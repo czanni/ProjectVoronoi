@@ -74,6 +74,7 @@ void Graph::addPoint (GEO::vec2 point)
 {
     m_points.push_back(point);
     m_connexions.push_back(std::vector<int>());
+    pointTreatment.push_back(treatment(unknown));
 
 }
 
@@ -123,6 +124,28 @@ void Graph::writeToFile() {
 const std::vector<std::vector<int> >& Graph::getConnexions() {
     return m_connexions;
 }
+
+bool Graph::existsEdge(int i, int k) const {
+    if (std::find(m_connexions[i].begin(), m_connexions[i].end(), k )== m_connexions[i].end())
+    {
+        return false;
+    }
+    if (std::find(m_connexions[k].begin(), m_connexions[k].end(), i )== m_connexions[k].end())
+    {
+        return false;
+    }
+    return true;
+}
+
+void Graph::changeStatus(int i, treatment T) {
+    pointTreatment[i]=T;
+}
+
+treatment Graph::getStatus(int i) {
+    return pointTreatment[i];
+}
+
+
 /**
  *  function for deletion, i is the point to delete
  */
