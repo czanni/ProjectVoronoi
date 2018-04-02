@@ -152,11 +152,21 @@ void RenderArea::drawGraph(Graph &graph, QPainter &painter){
 void RenderArea::drawGraphV(Graph &graph, QPainter &painter){
     //Conversion des points pour l'affichage
     std::vector <QPointF> pointsF = ConvertVec2toQPointF(graph.getPoints());
-
     int index = 0;
+    std::map <std::pair<int,int>, bool> edgeIntersects = GraphMaker::voronoiIntersection(graph);
+    GraphMaker::fixOutsidePoints(graph);
+
     foreach(const std::vector<int>& connexion, graph.getConnexions()){
         foreach(int i, connexion){
-            painter.drawLine(pointsF[i], pointsF[index]);
+            if (edgeIntersects.find(std::pair<int,int>(i,index)) != edgeIntersects.end()) {
+                    painter.setPen(QPen(Qt::red, 2));
+                    painter.drawLine(pointsF[i], pointsF[index]);
+                    painter.setPen(QPen(Qt::green, 3));
+
+                }
+            else {
+                painter.drawLine(pointsF[i], pointsF[index]);
+            }
         }
         index++;
     }

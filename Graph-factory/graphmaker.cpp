@@ -96,7 +96,7 @@ std::unique_ptr<Graph> makeMorePoints(Graph &inputGraph, float step) {
 
         //If we moved, we check the distance to the current point, to see if we aren't farther away than needed
 
-        int nStep = 15; //TODO:20.03 ajuster le nStep pour mettre une densité linéique de points
+        int nStep = 75; //TODO:20.03 ajuster le nStep pour mettre une densité linéique de points
 
         for (int k=1;k<nStep;++k) {
             out -> addPoint(inputGraph.getPointCoordinate(currentVertex) + direction*((float) k / (float) nStep));
@@ -185,7 +185,7 @@ std::unique_ptr<Graph> extractVoronoi(Graph &inputGraph_small, float step) {
             signed_index_t t2 = delaunay->cell_to_cell()[3*t+e];
             if(t2 == -1) {
                 voronoiGraph -> addInfinite(t); //add to the infinite matrix the vertex connected to the inf vertex.
-                //TODO: évaluer quel edge rencontre un edge du graph donné en input et le stocker
+                //TODO: évaluer quel edge rencontre un edge du graph donné en input et le stocker.
                 if (isOut(inputGraph,t,e)) {
                     voronoiGraph -> changeStatus(t,treatment::outside);
                 }
@@ -203,11 +203,95 @@ std::unique_ptr<Graph> extractVoronoi(Graph &inputGraph_small, float step) {
 }
 
 
-std::vector <bool> insideOutTable(Graph &inputGraph) {
+std::map <std::pair<int,int>, bool> voronoiIntersection (Graph& inputGraph) {
+    delaunay = Delaunay::create(2,"BDEL2d");
+    delaunay->set_vertices(inputGraph.getPoints().size(), &(inputGraph.getPoints().data()->x));
+
+    std::map <std::pair<int,int>, bool> intersects;
+    for(index_t t=0; t<delaunay->nb_cells(); ++t) {
+        //function from display_edges
+        for(index_t e=0; e<3; ++e) {
+            signed_index_t t2 = delaunay->cell_to_cell()[3*t+e];
+            index_t lv1 = (e+1)%3;
+            index_t lv2 = (e+2)%3;
+            index_t v1 = index_t(delaunay->cell_to_v()[3*t+lv1]);
+            index_t v2 = index_t(delaunay->cell_to_v()[3*t+lv2]);
+
+            if (inputGraph.existsEdge(v1,v2)) {
+                  std::map<std::pair<int,int>,bool>::iterator it = intersects.begin();
+                  intersects.insert (it, std::pair<std::pair<int,int>,bool>(std::pair<int,int>((int)v1,(int)v2),true));
+            }
+        }
+    }
+    return intersects;
+}
+
+void depthSearch_outside(Graph & voronoiGraph,int previous, int next,  std::vector<bool> * visited, std::map <std::pair<int,int>, bool> voronoiIntersection){
+    (*visited)[next]=true;
+    if  (voronoiGraph.getStatus(previous)==treatment(unknown) ) {
+        return;
+    }
+    //If the edge intersects the border we reverse status
+    if (voronoiIntersection.find(std::pair<int,int>(previous,next)) != voronoiIntersection.end()) {
+        if (voronoiGraph.getStatus(previous)==treatment(outside)) {
+            voronoiGraph.changeStatus(next, treatment(inside));
+        }
+        else {
+            voronoiGraph.changeStatus(next, treatment(outside));
+        }
+    }
+    //Else, we make it the same
+    else {
+        voronoiGraph.changeStatus(next,voronoiGraph.getStatus(previous));
+    }
+    for (int i:voronoiGraph.directAdjacency(next)) {
+        if (!((*visited)[i])) {
+            depthSearch_outside(voronoiGraph,next,i, visited, voronoiIntersection);
+        }
+    }
+
 
 }
 
+std::vector<int> fixOutsidePoints_AUX(Graph & voronoiGraph, std::map <std::pair<int,int>, bool> voronoiIntersection) {
+    //As we will compute the search on different points and we don't want to visit each points several times, we store visited as a ptr
+     std::vector<bool> * visited;
+     visited->reserve(voronoiGraph.getSize());
+     for (int i=0;i<voronoiGraph.getSize();++i) {
+         visited->push_back(false);
+     }
+    //Depth first search on outside points
+    //Get the list of points to begin with (might be only one, and can be empty)
+    std::vector <int> markedForDeletion = {};
+    std::vector<int> initialPoints = {};
+    for (int i=0;i<voronoiGraph.getSize();++i) {
+        if (voronoiGraph.getStatus(i) == treatment(outside)) {
+            initialPoints.push_back(i);
+        }
+    }
+    for (int i:initialPoints) {
+        for (int k:voronoiGraph.directAdjacency(i)) {
+            depthSearch_outside(voronoiGraph,i,k,visited,voronoiIntersection);
+        }
+    }
+
+}
+
+void fixOutsidePoints(Graph &inputGraph) {
+     std::map <std::pair<int,int>, bool> voronoiIntersect = voronoiIntersection(inputGraph);
+     if (inputGraph.getSize()>0) {
+         Graph voronoiGraph=*extractVoronoi(inputGraph);
+         fixOutsidePoints_AUX(voronoiGraph, voronoiIntersect);
+     }
+
+}
+
+
+
+
+
 std::unique_ptr<Graph> removeOutsidePoints(Graph &voronoiGraph) {
+
 
 }
 
@@ -350,6 +434,7 @@ vec2 infiniteVertex(index_t t, index_t e) {
     return 0.5*(p1+p2)+100000.0*n;
 
 }
+
 
 
 

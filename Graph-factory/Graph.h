@@ -21,6 +21,7 @@ class Graph
     std::vector <int> infinite_connection;
     std::vector <treatment> pointTreatment;
 
+
 public:
     Graph();
     void addEdge(std::array<int,2> connexion );

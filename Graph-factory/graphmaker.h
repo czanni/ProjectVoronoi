@@ -19,7 +19,7 @@ namespace GraphMaker {
 
 typedef GEO::vector<GEO::vec2> Polygon;
 
-//Tout mettre en private sauf extractvoronoi et infinitevertex
+//Tout mettre en private sauf extractvoronoi et infinitevertex et voronoiIntersection
 
     GEO::index_t findVertex(GEO::index_t t, GEO::index_t v);
     GEO::vec2 infiniteVertex(GEO::index_t t, GEO::index_t e);
@@ -29,8 +29,8 @@ typedef GEO::vector<GEO::vec2> Polygon;
     std::unique_ptr<Graph> removeOutsidePoints(Graph &voronoiGraph);
     std::unique_ptr<Graph> makeMorePoints(Graph &inputGraph, float step=25);
     std::unique_ptr <Graph> extractVoronoi(Graph &inputGraph, float step=25);
-
-
+    std::map <std::pair<int,int>, bool> voronoiIntersection (Graph& inputGraph);
+    void fixOutsidePoints(Graph &inputGraph);
 
 
 }
