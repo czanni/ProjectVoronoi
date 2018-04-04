@@ -96,7 +96,7 @@ std::unique_ptr<Graph> makeMorePoints(Graph &inputGraph, float step) {
 
         //If we moved, we check the distance to the current point, to see if we aren't farther away than needed
 
-        int nStep = 2; //TODO:20.03 ajuster le nStep pour mettre une densité linéique de points
+        int nStep = 10; //TODO:20.03 ajuster le nStep pour mettre une densité linéique de points
 
         for (int k=1;k<nStep;++k) {
             out -> addPoint(inputGraph.getPointCoordinate(currentVertex) + direction*((float) k / (float) nStep));
@@ -147,11 +147,12 @@ bool isOut( const Graph& graph, index_t t, index_t e) {
  * [IN] the step (in arbitrary units, in function of the chosen unit in the Graph) of the cutting of the Graph, in order ot make it closer to a graph of segment.
  *
  */
-std::unique_ptr<Graph> extractVoronoi(Graph &inputGraph) {
+std::unique_ptr<Graph> extractVoronoi(Graph &inputGraph_small, float step) {
 //    std::unique_ptr <Graph> voronoiGraph ;
     //Then, we call the function makeMorePoints to add the necessary points to be closest to the segment voronoi diagram.
 
- //   auto ptrGraph = makeMorePoints(inputGraph_small, step);
+    auto ptrGraph = makeMorePoints(inputGraph_small, step);
+    Graph& inputGraph = *ptrGraph;
 //    Graph inputGraph = *makeMorePoints(inputGraph_small, step);
 
 
@@ -188,9 +189,9 @@ std::unique_ptr<Graph> extractVoronoi(Graph &inputGraph) {
                 if (isOut(inputGraph,t,e)) {
                     voronoiGraph -> changeStatus(t,treatment::outside);
                 }
-                /*else {
+                else {
                     voronoiGraph -> changeStatus(t,treatment::inside);
-                }*/
+                }
 
             } else if(t2 >signed_index_t(t)) {
 
@@ -200,27 +201,6 @@ std::unique_ptr<Graph> extractVoronoi(Graph &inputGraph) {
     }
     return std::move(voronoiGraph);
 }
-
-std::unique_ptr<Graph> extractDelaunay(Graph &inputGraph, float step) {
-    auto delaunayGraph = std::make_unique<Graph>();
-    delaunay = Delaunay::create(2,"BDEL2d");
-    delaunay->set_vertices(inputGraph.getPoints().size(), &(inputGraph.getPoints().data()->x));
-    int newindex=0;
-    for(index_t c=0; c<delaunay->nb_cells(); ++c) {
-                const signed_index_t* cell = delaunay->cell_to_v() + 3*c;
-                for(index_t e=0; e<3; ++e) {
-                    signed_index_t v1 = cell[e];
-                    signed_index_t v2 = cell[(e+1)%3];
-                    delaunayGraph -> addPoint((GEO::vec2) delaunay->vertex_ptr(index_t(v1)));
-                    delaunayGraph -> addPoint((GEO::vec2) delaunay->vertex_ptr(index_t(v2)));
-                    delaunayGraph -> addEdge({newindex, newindex+1});
-                    newindex+=2;
-                }
-            }
-
-    return std::move(delaunayGraph);
-}
-
 
 
 
