@@ -13,6 +13,8 @@
 #include <geogram/mesh/mesh.h>
 #include <geogram/mesh/mesh_io.h>
 #include "Graph.h"
+#include <set>
+
 
 
 namespace GraphMaker {
@@ -27,11 +29,11 @@ typedef GEO::vector<GEO::vec2> Polygon;
     GEO::vec2 circumcenter(GEO::index_t t) ;
     void initialize();
     std::unique_ptr<Graph> removeOutsidePoints(Graph &voronoiGraph);
-    std::unique_ptr<Graph> makeMorePoints(Graph &inputGraph, float step=5);
-    std::unique_ptr <Graph> extractVoronoi(Graph &inputGraph);
+    std::unique_ptr<Graph> makeMorePoints(Graph &inputGraph, float step=8);
+    std::unique_ptr<Graph> extractVoronoi(Graph &inputGraph, std::set<std::pair<int,int>> &intersects);
     std::map <std::pair<int,int>, bool> voronoiIntersection (Graph& inputGraph);
-    void fixOutsidePoints(Graph &inputGraph);
-    std::unique_ptr<Graph> extractDelaunay(Graph &inputGraph_small, float step=5);
+    void fixOutsidePoints(Graph &inputGraph, std::set <std::pair<int,int>> voronoiIntersect);
+    std::unique_ptr<Graph> extractDelaunay(Graph &inputGraph_small, float step=50);
 
 
 }

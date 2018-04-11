@@ -6,6 +6,7 @@
 #include <QWidget>
 #include <vector>
 #include <Graph.h>
+#include <set>
 
 //! [0]
 class RenderArea : public QWidget
@@ -39,6 +40,8 @@ private:
     Graph ContoursInterieur;
     Graph VoronoiExterieur;
     Graph VoronoiInterieur;
+    std::set <std::pair<int,int>> edgeIntersects;
+
 
     bool IsExterieurContours;
 };
