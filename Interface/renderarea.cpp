@@ -94,29 +94,27 @@ void RenderArea::savePoints() //Pour enregistrer les graphes dans un fichier tex
     Medial::savePoints(filename.toStdString(), ContoursExterieur, ContoursInterieur);
 }
 
-void RenderArea::loadPoints(){ //Pour charger les graphes à partir d'un fichier texte
+/*void RenderArea::loadPoints(){ //Pour charger les graphes à partir d'un fichier texte
     QString filename = QFileDialog::getOpenFileName(this, "Charger un fichier texte", QString(), "Texte (*.txt)");
     ContoursExterieur = Medial::loadPoints(filename.toStdString(), true);
     ContoursInterieur = Medial::loadPoints(filename.toStdString(), false);
-}
-
-
-/*void RenderArea::loadPoints(){ //Pour charger les slices à partir d'un fichier texte
-    QString filename = QFileDialog::getOpenFileName(this, "Charger un fichier texte", QString(), "Texte (*)");
-    slices = Medial::loadSlices(filename.toStdString());
-    ContoursExterieur = slices[slice];
-    update();
 }*/
 
+
+void RenderArea::loadPoints(){ //Pour charger les slices à partir d'un fichier texte
+    QString filename = QFileDialog::getOpenFileName(this, "Charger un fichier texte", QString(), "Texte (*)");
+    slices = Medial::loadSlices(filename.toStdString());
+    edgeIntersects = *new std::set <std::pair<int,int>>();
+    slice=96;
+    ContoursExterieur = slices[slice];
+    update();
+}
+
 void RenderArea::nxtSlice(){
-    if (slice == 96) {
-        ++slice;
-        prevSlice();
-        return;
-    }
     if (slice < slices.size()){
         ++slice;
         ContoursExterieur = slices[slice];
+        edgeIntersects = *new std::set <std::pair<int,int>>();
         VoronoiExterieur = * GraphMaker::extractVoronoi(ContoursExterieur, edgeIntersects);
         GraphMaker::fixOutsidePoints(VoronoiExterieur, edgeIntersects);
         update();

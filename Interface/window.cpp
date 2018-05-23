@@ -39,9 +39,9 @@ Window::Window()
     connect(nextSlice, SIGNAL(released()), renderArea, SLOT(nxtSlice()));
     connect(previousSlice, SIGNAL(released()), renderArea, SLOT(prevSlice()));
 
-    //QTimer *timer = new QTimer(this);
-    //connect(timer, SIGNAL(timeout()), renderArea, SLOT(nxtSlice()));
-    //timer -> start(80);
+    QTimer *timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), renderArea, SLOT(nxtSlice()));
+    timer -> start(20);
 
     QGridLayout *mainLayout = new QGridLayout;
     mainLayout->setColumnStretch(0, 1);

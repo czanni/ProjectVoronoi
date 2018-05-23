@@ -124,21 +124,22 @@ std::vector<Graph> loadSlices(std::string filename){ //Pour charger les graphes 
     for (int k=0;k<nbSlice;++k){
         int concav;
         istrm >> concav;
-        if (concav==1) {
-            Graph graph = Graph();
-            int nbrePoints;
+        Graph graph = Graph();
+        for (int k=0;k<concav;++k) {
+            int nbrePoints; //le nombre de point par concavité0
             istrm >> nbrePoints;
             for(int i = 0 ; i < nbrePoints ; i++){
                 istrm >> x >> y;
                 GEO::vec2 point(x/5+350, y/5+250);
                 graph.addPoint(point);
             }
-            for (int i=0; i<nbrePoints-1; ++i) {
+            for (int i=graph.numVertex()-nbrePoints; i < graph.numVertex()-1; ++i) {
                 graph.addEdge({i,i+1});
             }
-            graph.addEdge({0, nbrePoints-1});
-            Slices.push_back(graph);
+            graph.addEdge({graph.numVertex()-nbrePoints, graph.numVertex()-1});
+
         }
+        Slices.push_back(graph);
     }
     return Slices;
 
