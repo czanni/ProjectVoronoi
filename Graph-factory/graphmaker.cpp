@@ -267,7 +267,7 @@ void depthSearch_outside(Graph & voronoiGraph,int previous, int next,  std::vect
             voronoiGraph.changeStatus(next, treatment(outside));
         }
     }
-    //Else, we make it the same
+    //Else, we make it the stame
     else {
         voronoiGraph.changeStatus(next,voronoiGraph.getStatus(previous));
     }
@@ -292,7 +292,7 @@ void fixOutsidePoints(Graph &voronoiGraph, std::set <std::pair<int,int>> & voron
          //Get the list of points to begin with (might be only one, and can be empty)
          std::vector<int> initialPoints = {};
          for (int i=0;i<voronoiGraph.numVertex();++i) {
-             if (voronoiGraph.getStatus(i) == treatment(outside)) {
+             if (voronoiGraph.getStatus(i) !=treatment(unknown)) {
                  initialPoints.push_back(i);
              }
          }

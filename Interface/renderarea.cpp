@@ -227,6 +227,7 @@ void RenderArea::drawGraphV(Graph &graph, QPainter &painter){
 
 void RenderArea::voronoiDiagram(){
     ContoursExterieur = *GraphMaker::makeMorePoints(ContoursExterieur);
+    edgeIntersects = *new std::set <std::pair<int,int>>();
     if (IsExterieurContours){
         VoronoiExterieur = * GraphMaker::extractVoronoi(ContoursExterieur, edgeIntersects);
     }
