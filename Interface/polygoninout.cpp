@@ -113,4 +113,35 @@ Graph loadPoints(std::string filename, bool externe){ //Pour charger les graphes
     return graph;
 }
 
+
+std::vector<Graph> loadSlices(std::string filename){ //Pour charger les graphes à partir d'un fichier texte
+    std::ifstream istrm(filename, std::ios::out);
+    std::vector<Graph> Slices = std::vector<Graph>();
+    int nbSlice;
+    istrm >> nbSlice;
+    float x;
+    float y;
+    for (int k=0;k<nbSlice;++k){
+        int concav;
+        istrm >> concav;
+        if (concav==1) {
+            Graph graph = Graph();
+            int nbrePoints;
+            istrm >> nbrePoints;
+            for(int i = 0 ; i < nbrePoints ; i++){
+                istrm >> x >> y;
+                GEO::vec2 point(x/5+350, y/5+250);
+                graph.addPoint(point);
+            }
+            for (int i=0; i<nbrePoints-1; ++i) {
+                graph.addEdge({i,i+1});
+            }
+            graph.addEdge({0, nbrePoints-1});
+            Slices.push_back(graph);
+        }
+    }
+    return Slices;
+
+}
+
 }

@@ -21,20 +21,22 @@ namespace GraphMaker {
 
 typedef GEO::vector<GEO::vec2> Polygon;
 
-//Tout mettre en private sauf extractvoronoi et infinitevertex et voronoiIntersection
 
-    GEO::index_t findVertex(GEO::index_t t, GEO::index_t v);
-    GEO::vec2 infiniteVertex(GEO::index_t t, GEO::index_t e);
-    void getVoronoiCell(GEO::index_t t0, GEO::index_t lv, Polygon& cell);
-    GEO::vec2 circumcenter(GEO::index_t t) ;
+    //MUST USE THIS FUNCTION BEFORE ANY USE OF THE LIBRARY
     void initialize();
-    std::unique_ptr<Graph> removeOutsidePoints(Graph &voronoiGraph);
-    std::unique_ptr<Graph> makeMorePoints(Graph &inputGraph, float step=8);
+
+    void removeOutsidePoints(Graph &voronoiGraph);
+    std::unique_ptr<Graph> makeMorePoints(Graph &inputGraph, const float step=10);
     std::unique_ptr<Graph> extractVoronoi(Graph &inputGraph, std::set<std::pair<int,int>> &intersects);
     std::map <std::pair<int,int>, bool> voronoiIntersection (Graph& inputGraph);
-    void fixOutsidePoints(Graph &inputGraph, std::set <std::pair<int,int>> voronoiIntersect);
+    void fixOutsidePoints(Graph &inputGraph, std::set<std::pair<int, int> > &voronoiIntersection);
     std::unique_ptr<Graph> extractDelaunay(Graph &inputGraph_small, float step=50);
 
+    //Auxiliary functions using GEOGRAM
+    void getVoronoiCell(GEO::index_t t0, GEO::index_t lv, Polygon& cell);
+    GEO::vec2 circumcenter(GEO::index_t t) ;
+    GEO::index_t findVertex(GEO::index_t t, GEO::index_t v);
+    GEO::vec2 infiniteVertex(GEO::index_t t, GEO::index_t e);
 
 }
 

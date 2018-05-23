@@ -4,11 +4,14 @@
 #include <QtWidgets>
 
 
+
 const int IdRole = Qt::UserRole;
 
 
 Window::Window()
 {
+
+
     renderArea = new RenderArea;
     saveImageButton = new QPushButton("Save Image", this);
     resetButton = new QPushButton("Reset Points", this);
@@ -19,6 +22,9 @@ Window::Window()
     linkPointsButton = new QPushButton("Link Points", this);
     voronoiButton = new QPushButton("Create Voronoï Diagram", this);
 
+    nextSlice = new QPushButton("Next Slice", this);
+    previousSlice = new QPushButton("Previous Slice", this);
+
     connect(saveImageButton, SIGNAL(released()), this, SLOT(saveImage()));
     connect(resetButton, SIGNAL(released()), renderArea, SLOT(resetPoints()));
     connect(previousPointsButton, SIGNAL(released()), renderArea, SLOT(previousPoints()));
@@ -28,6 +34,14 @@ Window::Window()
     connect(linkPointsButton, SIGNAL(released()), renderArea, SLOT(linkPoints()));
     connect(voronoiButton, SIGNAL(released()), renderArea, SLOT(voronoiDiagram()));
     connect(voronoiButton, SIGNAL(voronoiDiagram()), this, SLOT(repaint())); //TODO
+
+
+    connect(nextSlice, SIGNAL(released()), renderArea, SLOT(nxtSlice()));
+    connect(previousSlice, SIGNAL(released()), renderArea, SLOT(prevSlice()));
+
+    //QTimer *timer = new QTimer(this);
+    //connect(timer, SIGNAL(timeout()), renderArea, SLOT(nxtSlice()));
+    //timer -> start(80);
 
     QGridLayout *mainLayout = new QGridLayout;
     mainLayout->setColumnStretch(0, 1);
@@ -41,6 +55,9 @@ Window::Window()
     mainLayout->addWidget(exterieurContoursCheckBox, 3, 3, 1, 2);
     mainLayout->addWidget(linkPointsButton, 3, 2);
     mainLayout->addWidget(voronoiButton, 4, 1);
+    mainLayout->addWidget(nextSlice, 4, 2);
+    mainLayout->addWidget(previousSlice, 4, 3);
+
     setLayout(mainLayout);
 
     exterieurContoursCheckBox->setChecked(true);
@@ -55,3 +72,5 @@ void Window::saveImage() //Permet d'enregister l'image
     renderArea->render(&img_save);//je récupère le contenu de renderArea
     img_save.save(path);//J'enregistre le contenu dans le nom que j'ai choisi auparavant /!\ Ne pas oublier de mettre un suffixe (ex : .png)
 }
+
+

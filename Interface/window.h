@@ -18,7 +18,6 @@ public:
 
 private slots:
     void saveImage();
-
 private:
     RenderArea *renderArea;
     QPushButton *saveImageButton;
@@ -29,6 +28,11 @@ private:
     QCheckBox *exterieurContoursCheckBox;
     QPushButton *linkPointsButton;
     QPushButton *voronoiButton;
+    QPushButton *nextSlice;
+    QPushButton *previousSlice;
+    QPushButton *stopTim;
+
+
 };
 
 

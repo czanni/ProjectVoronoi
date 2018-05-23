@@ -70,7 +70,7 @@ std::vector <int> Graph::directAdjacency(int v) {
 }
 
 
-void Graph::addPoint (GEO::vec2 point)
+void Graph::addPoint (const GEO::vec2 &point)
 {
     m_points.push_back(point);
     m_connexions.push_back(std::vector<int>());
@@ -87,7 +87,7 @@ std::vector <GEO::vec2>& Graph::getPoints() {
     return m_points;
 }
 
-int Graph::getSize() {
+int Graph::numVertex() {
     return m_points.size();
 }
 
@@ -146,50 +146,69 @@ treatment Graph::getStatus(int i) {
 }
 
 
-/**
- *  function for deletion, i is the point to delete
- */
 
-/*
- * Faire une fonction pour supprimer une liste de points, avec une map qui donne en temps constant l'index du nouveau point en fonction du précédent.
- */
-/*
-void Graph::remove(std::vector <int> toRemove) {
-
-    // First, we create the map that will correspond each index to the next
-    // We create a vector, same size as the graph, with at each spot will be the shift needed to correspond to the new graph. an index of -1 means to delete
-    std::vector <int> shifts (m_points.size(), 0);
-
-    for (const auto &p : toRemove) {
-        // We go through every point we need to remove
-        for (int i=0;i<shifts.size();++i) {
-            // If we have to remove it : we put -1 in it
-            if (i==p) {
-                shifts[i] = -1;
+void Graph::removeOutsidePoints(){
+    std::map <int, int> oldToNewIndex;
+    GEO::vec2 storedPoint;
+    treatment storedTreatment;
+    std::vector <int>  storedConnexions;
+    int i = 0;
+    int j = numVertex()-1;
+    int swapCount = 0;
+    while (i<=j) {
+        if (getStatus(i) == treatment(inside)){
+            //The point is to be kept, then we add its index to the table, if it hasn't been swaped, then it must stay in place, otherwise we put its old index
+            if (swapCount == 0) {
+                oldToNewIndex.insert(std::pair<int,int> (i,i));
             }
-            //Else, if greater and not -1, we need to increase the shift
-            else if (shifts[i]!=-1 && i>p) {
-                shifts[i] = shifts[i] + 1;
+            else {
+                oldToNewIndex.insert(std::pair<int,int> (j+1,i));
+                swapCount = 0;
             }
+            ++i;
+        }
+        else {
+            //Change point coordinate
+            storedPoint = m_points[j];
+            m_points[j] = m_points[i];
+            m_points[i] = storedPoint;
+
+            //Change connexions
+            storedConnexions = m_connexions[j];
+            m_connexions[j] = m_connexions[i];
+            m_connexions[i] = storedConnexions;
+
+            //Change status
+            storedTreatment = pointTreatment[j];
+            pointTreatment[j] = pointTreatment[i];
+            pointTreatment[i] = storedTreatment;
+
+            ++swapCount;
+            --j;
         }
     }
 
-    //We remove one point
-    m_points.pop_back();
+    m_points.resize(i);
+    m_connexions.resize(i);
+    pointTreatment.resize(i);
 
-    //Then, we reindex all the points in the connections
-    for (int k=0;k<m_connexions.size;++k) {
-        for (int j=0;j<m_connexions[k].size;++j){
 
-           //If point index greater than i, decrease it by one
-            if (m_connexions[k][j] > i) {
-                m_points[k][j] = m_points[k][j]-1;
+    for (int k= 0; k<m_connexions.size();++k ) {
+        int l =0;
+        while (l<m_connexions[k].size()) {
+            if (oldToNewIndex.find(m_connexions[k][l]) == oldToNewIndex.end() ) {
+                m_connexions[k].erase(m_connexions[k].begin() + l);
             }
-        }
+            else {
+                m_connexions[k][l] = oldToNewIndex.find(m_connexions[k][l]) -> second;
+                ++l;
+            }
 
+        }
     }
 }
-*/
+
+
 
 /*
  * Point IN/OUT : partir des points à l'infini

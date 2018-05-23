@@ -9,7 +9,9 @@
 namespace Medial{
 
 void savePoints(std::string filename, Graph &extPoints, Graph &intPoints);
+std::vector<Graph> loadSlices(std::string filename);
 Graph loadPoints(std::string filename, bool externe);
+
 }
 
 #endif // POLYGONINOUT

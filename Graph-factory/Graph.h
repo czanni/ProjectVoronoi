@@ -25,12 +25,12 @@ class Graph
 public:
     Graph();
     void addEdge(std::array<int,2> connexion );
-    void addPoint (GEO::vec2 point);
+    void addPoint (const GEO::vec2 &point);
     static std::unique_ptr <Graph> demoGraph(int n);
     std::vector<GEO::vec2> &getPoints();
     void addInfinite (GEO::index_t i);
     void writeToFile();
-    int getSize();
+    int numVertex();
     std::vector <int> directAdjacency(int v);
     const std::vector <std::vector <int> >& getConnexions();
     const std::vector <int>& getInfiniteConnection();
@@ -38,6 +38,8 @@ public:
     bool existsEdge(int i, int k) const;
     void changeStatus(int i, treatment T);
     treatment getStatus(int i);
+    void removeOutsidePoints();
+
 
 
 

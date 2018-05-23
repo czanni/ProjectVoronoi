@@ -100,6 +100,43 @@ void RenderArea::loadPoints(){ //Pour charger les graphes à partir d'un fichier
     ContoursInterieur = Medial::loadPoints(filename.toStdString(), false);
 }
 
+
+/*void RenderArea::loadPoints(){ //Pour charger les slices à partir d'un fichier texte
+    QString filename = QFileDialog::getOpenFileName(this, "Charger un fichier texte", QString(), "Texte (*)");
+    slices = Medial::loadSlices(filename.toStdString());
+    ContoursExterieur = slices[slice];
+    update();
+}*/
+
+void RenderArea::nxtSlice(){
+    if (slice == 96) {
+        ++slice;
+        prevSlice();
+        return;
+    }
+    if (slice < slices.size()){
+        ++slice;
+        ContoursExterieur = slices[slice];
+        VoronoiExterieur = * GraphMaker::extractVoronoi(ContoursExterieur, edgeIntersects);
+        GraphMaker::fixOutsidePoints(VoronoiExterieur, edgeIntersects);
+        update();
+    }
+    else {
+        slice=0;
+    }
+
+}
+void RenderArea::prevSlice(){
+    if (slice < slices.size()){
+        --slice;
+        ContoursExterieur = slices[slice];
+        update();
+    }
+    else {
+        slice=0;
+    }
+}
+
 void RenderArea::setExterieurContoursBool(bool exterieurContoursBool) //Si la case est coché, on traite le contour extérieur. Sinon, le contour intérieur.
 {
     this->IsExterieurContours = exterieurContoursBool;

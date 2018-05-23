@@ -31,15 +31,19 @@ public slots:
     void drawGraph(Graph &graph, QPainter &painter);
     void drawGraphV(Graph &graph, QPainter &painter);
     void voronoiDiagram();
+    void nxtSlice();
+    void prevSlice();
 
 protected:
     void paintEvent(QPaintEvent *event) Q_DECL_OVERRIDE;
 
 private:
+    unsigned int slice=0;
     Graph ContoursExterieur;
     Graph ContoursInterieur;
     Graph VoronoiExterieur;
     Graph VoronoiInterieur;
+    std::vector<Graph> slices;
     std::set <std::pair<int,int>> edgeIntersects;
 
 
