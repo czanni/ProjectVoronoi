@@ -74,7 +74,7 @@ void Graph::addPoint (const GEO::vec2 &point)
 {
     m_points.push_back(point);
     m_connexions.push_back(std::vector<int>());
-    pointTreatment.push_back(treatment(unknown));
+    m_pointTreatment.push_back(treatment(unknown));
 
 }
 
@@ -93,7 +93,7 @@ int Graph::numVertex() {
 
 
 void Graph::addInfinite (GEO::index_t i) {
-    infinite_connection.push_back(i);
+    m_infiniteConnections.push_back(i);
 }
 
 
@@ -138,11 +138,11 @@ bool Graph::existsEdge(int i, int k) const {
 }
 
 void Graph::changeStatus(int i, treatment T) {
-    pointTreatment[i]=T;
+    m_pointTreatment[i]=T;
 }
 
 treatment Graph::getStatus(int i) {
-    return pointTreatment[i];
+    return m_pointTreatment[i];
 }
 
 
@@ -179,9 +179,9 @@ void Graph::removeOutsidePoints(){
             m_connexions[i] = storedConnexions;
 
             //Change status
-            storedTreatment = pointTreatment[j];
-            pointTreatment[j] = pointTreatment[i];
-            pointTreatment[i] = storedTreatment;
+            storedTreatment = m_pointTreatment[j];
+            m_pointTreatment[j] = m_pointTreatment[i];
+            m_pointTreatment[i] = storedTreatment;
 
             ++swapCount;
             --j;
@@ -190,7 +190,7 @@ void Graph::removeOutsidePoints(){
 
     m_points.resize(i);
     m_connexions.resize(i);
-    pointTreatment.resize(i);
+    m_pointTreatment.resize(i);
 
 
     for (int k= 0; k<m_connexions.size();++k ) {
@@ -221,7 +221,7 @@ void Graph::removeOutsidePoints(){
  */
 
 const std::vector <int>& Graph::getInfiniteConnection() {
-    return infinite_connection;
+    return m_infiniteConnections;
 }
 
 

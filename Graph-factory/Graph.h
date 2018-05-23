@@ -18,8 +18,8 @@ class Graph
     //TODO: marquer les fonctions et input en const s'ils ne sont pas modifiés
     std::vector <std::vector <int> > m_connexions;
     std::vector <GEO::vec2> m_points;
-    std::vector <int> infinite_connection;
-    std::vector <treatment> pointTreatment;
+    std::vector <int> m_infiniteConnections;
+    std::vector <treatment> m_pointTreatment;
 
 
 public:
