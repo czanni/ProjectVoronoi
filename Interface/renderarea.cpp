@@ -114,9 +114,7 @@ void RenderArea::nxtSlice(){
     if (slice < slices.size()){
         ++slice;
         ContoursExterieur = slices[slice];
-        edgeIntersects = *new std::set <std::pair<int,int>>();
-        VoronoiExterieur = * GraphMaker::extractVoronoi(ContoursExterieur, edgeIntersects);
-        GraphMaker::fixOutsidePoints(VoronoiExterieur, edgeIntersects);
+        VoronoiExterieur = * GraphMaker::extractMedialAxis(ContoursExterieur);
         update();
     }
     else {
@@ -227,12 +225,12 @@ void RenderArea::voronoiDiagram(){
     ContoursExterieur = *GraphMaker::makeMorePoints(ContoursExterieur);
     edgeIntersects = *new std::set <std::pair<int,int>>();
     if (IsExterieurContours){
-        VoronoiExterieur = * GraphMaker::extractVoronoi(ContoursExterieur, edgeIntersects);
+        VoronoiExterieur = * GraphMaker::extractMedialAxis(ContoursExterieur);
     }
     else{
         VoronoiInterieur = *GraphMaker::extractVoronoi(ContoursInterieur, edgeIntersects);
     }
-    GraphMaker::fixOutsidePoints(VoronoiExterieur, edgeIntersects);
+    //GraphMaker::fixOutsidePoints(VoronoiExterieur, edgeIntersects);
     update();
 }
 

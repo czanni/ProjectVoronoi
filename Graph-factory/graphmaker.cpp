@@ -137,7 +137,7 @@ bool isOut( const Graph& graph, index_t t, index_t e) {
     index_t v1 = index_t(delaunay->cell_to_v()[3*t+lv1]);
     index_t v2 = index_t(delaunay->cell_to_v()[3*t+lv2]);
 
-    return !(graph.existsEdge(v1,v2));
+    return !(graph.existsEdge(v1,v2)); // t et e sur le diagramme de voronoi, v1 v2 sur le graphe, calculer le projeté en produit scalaire et voir le plus proche aux deux edges.
 
 }
 
@@ -370,6 +370,16 @@ index_t findVertex(index_t t, index_t v) {
     geo_assert_not_reached;
 }
 
+std::unique_ptr<Graph> extractMedialAxis(Graph & inputGraph) {
+    std::unique_ptr<Graph> medialAxis = std::make_unique<Graph>();
+    std::set <std::pair<int,int>> edgeIntersects{};
+
+    medialAxis = extractVoronoi(inputGraph, edgeIntersects);
+    fixOutsidePoints(*medialAxis, edgeIntersects);
+    return std::move(medialAxis);
+
+}
+
 /**
  * Standard graph depth search, works on cells of the voronoi diagram
  */
@@ -446,7 +456,6 @@ vec2 infiniteVertex(index_t t, index_t e) {
     return 0.5*(p1+p2)+100000.0*n;
 
 }
-
 
 
 
