@@ -9,30 +9,39 @@
 #include <memory>
 #include <stdbool.h>
 #include <stdio.h>
+#include <map>
 
 
-enum treatment { inside, outside, unknown };
+enum class treatment { inside, outside, unknown };
+struct Neighbor {
+    int index;
+    GEO::vec2 closest;
+};
 
 class Graph
 {
     //TODO: marquer les fonctions et input en const s'ils ne sont pas modifiés
-    std::vector <std::vector <int> > m_connexions;
+    std::vector <std::vector <Neighbor> > m_connexions;
     std::vector <GEO::vec2> m_points;
     std::vector <int> m_infiniteConnections;
     std::vector <treatment> m_pointTreatment;
+    std::map<std::pair<int,int>, int> m_neighbors;
 
 
 public:
     Graph();
-    void addEdge(std::array<int,2> connexion );
+    void fixClosest(int i, int j, GEO::vec2 close);
+    std::map<std::pair<int,int>, int> getNeighbors();
+    void addNeighbor(int i, int j, int pointIndex);
+    void addEdge(const std::array<int,2> & connexion );
     void addPoint (const GEO::vec2 &point);
     static std::unique_ptr <Graph> demoGraph(int n);
     std::vector<GEO::vec2> &getPoints();
     void addInfinite (GEO::index_t i);
     void writeToFile();
     int numVertex();
-    std::vector <int> directAdjacency(int v);
-    const std::vector <std::vector <int> >& getConnexions();
+    std::vector<Neighbor> directAdjacency(int v);
+    const std::vector<std::vector<Neighbor> > &getConnexions();
     const std::vector <int>& getInfiniteConnection();
     GEO::vec2 & getPointCoordinate(int i);
     bool existsEdge(int i, int k) const;

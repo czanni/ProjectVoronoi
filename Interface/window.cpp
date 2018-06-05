@@ -41,7 +41,7 @@ Window::Window()
 
     QTimer *timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), renderArea, SLOT(nxtSlice()));
-    timer -> start(1);
+    //timer -> start(1);
 
     QGridLayout *mainLayout = new QGridLayout;
     mainLayout->setColumnStretch(0, 1);

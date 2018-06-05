@@ -149,14 +149,14 @@ std::vector <QPointF> ConvertVec2toQPointF(std::vector <GEO::vec2> points){ //Co
 
 void RenderArea::linkPoints(){ //Pour relier les points du graphe considéré
     if (IsExterieurContours){
-        int size = this->ContoursExterieur.getPoints().size();
+        int size = this->ContoursExterieur.numVertex();
         for(int i = 0 ; i < size ; i++){
             std::array<int,2> connexion({i, (i+1) % size});
             this->ContoursExterieur.addEdge(connexion);
         }
     }
     else{
-        int size = this->ContoursInterieur.getPoints().size();
+        int size = this->ContoursInterieur.numVertex();
         for(int i = 0 ; i < size ; i++){
             std::array<int,2> connexion({i, (i+1) % size});
             this->ContoursInterieur.addEdge(connexion);
@@ -170,9 +170,9 @@ void RenderArea::drawGraph(Graph &graph, QPainter &painter){
     std::vector <QPointF> pointsF = ConvertVec2toQPointF(graph.getPoints());
 
     int index = 0;
-    foreach(const std::vector<int>& connexion, graph.getConnexions()){
-        foreach(int i, connexion){
-            painter.drawLine(pointsF[i], pointsF[index]);
+    foreach(const std::vector<Neighbor>& connexion, graph.getConnexions()){
+        foreach(Neighbor i, connexion){
+            painter.drawLine(pointsF[i.index], pointsF[index]);
         }
         index++;
     }
@@ -181,6 +181,57 @@ void RenderArea::drawGraph(Graph &graph, QPainter &painter){
     painter.drawPoints(pointsF.data(), pointsF.size());
 }
 
+void RenderArea::drawGraphV(Graph &graph, QPainter &painter){
+    //Conversion des points pour l'affichage
+    std::vector <QPointF> pointsF = ConvertVec2toQPointF(graph.getPoints());
+    std::vector <QPointF> pointsFC = ConvertVec2toQPointF(ContoursExterieur.getPoints());
+    int index = 0;
+
+
+    if (graph.numVertex() > 0) {
+        for ( auto pair = graph.getNeighbors().begin(); pair != graph.getNeighbors().end(); ++pair){
+            painter.setPen(QPen(QColor(255,127,80), 2));
+            painter.drawLine(pointsF[(std::get<0>(pair -> first))]/2 + pointsF[(std::get<1>(pair -> first))]/2, pointsFC[pair->second]);
+            painter.setPen(QPen(QColor(0,0,0,2)));
+
+        }
+    }
+
+    foreach(const std::vector<Neighbor>& connexion, graph.getConnexions()){
+        foreach(Neighbor i, connexion){
+            if (edgeIntersects.find(std::pair<int,int>(i.index,index)) != edgeIntersects.end()) {
+                    painter.setPen(QPen(Qt::red, 2));
+                    painter.drawLine(pointsF[i.index], pointsF[index]);
+                    painter.setPen(QPen(Qt::green, 3));
+
+                }
+            else {
+                painter.drawLine(pointsF[i.index], pointsF[index]);
+            }
+        }
+
+        index++;
+    }
+    for (int i=0;i<pointsF.size();++i) {
+        if (graph.getStatus(i)==treatment::inside) {
+            painter.setPen(QPen(Qt::red, 5));
+            painter.drawPoint(pointsF[i]);
+            painter.setPen(QPen(Qt::green, 3));
+        }
+        else if (graph.getStatus(i)==treatment::outside) {
+            painter.setPen(QPen(Qt::cyan, 5));
+            painter.drawPoint(pointsF[i]);
+            painter.setPen(QPen(Qt::green, 3));
+        }
+        else if (graph.getStatus(i)==treatment::unknown) {
+            painter.setPen(QPen(Qt::black, 5));
+            painter.drawPoint(pointsF[i]);
+            painter.setPen(QPen(Qt::green, 3));
+        }
+    }
+
+}
+/*
 void RenderArea::drawGraphV(Graph &graph, QPainter &painter){
     //Conversion des points pour l'affichage
     std::vector <QPointF> pointsF = ConvertVec2toQPointF(graph.getPoints());
@@ -219,13 +270,36 @@ void RenderArea::drawGraphV(Graph &graph, QPainter &painter){
         }
     }
 
-}
+}*/
 
 void RenderArea::voronoiDiagram(){
-    ContoursExterieur = *GraphMaker::makeMorePoints(ContoursExterieur);
-    edgeIntersects = *new std::set <std::pair<int,int>>();
+    edgeIntersects = std::set <std::pair<int,int>> ();
     if (IsExterieurContours){
-        VoronoiExterieur = * GraphMaker::extractMedialAxis(ContoursExterieur);
+        Graph debug = Graph();
+        /*debug.addPoint({100,200});
+        debug.addPoint({200,100});
+        debug.addPoint({300,200});
+        debug.addPoint({200,300});
+        debug.addPoint({400,100});
+        debug.addPoint({500,200});
+        debug.addPoint({650,350});
+        debug.addPoint({350,350});
+
+        debug.addEdge({0,1});
+        debug.addEdge({1,2});
+        debug.addEdge({2,3});
+        debug.addEdge({3,0});
+        debug.addEdge({2,4});
+        debug.addEdge({4,5});
+        debug.addEdge({5,6});
+        debug.addEdge({6,7});
+        debug.addEdge({7,2});
+        ContoursExterieur = debug;*/
+        ContoursExterieur = *GraphMaker::makeMorePoints(ContoursExterieur);
+
+        VoronoiExterieur = * GraphMaker::extractVoronoi(ContoursExterieur, edgeIntersects);
+        GraphMaker::fixOutsidePoints(VoronoiExterieur, edgeIntersects);
+
     }
     else{
         VoronoiInterieur = *GraphMaker::extractVoronoi(ContoursInterieur, edgeIntersects);

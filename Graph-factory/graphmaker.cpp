@@ -58,12 +58,12 @@ GEO::vec2 circumcenter(index_t t) {
     return Geom::triangle_circumcenter(p1,p2,p3);
 }
 
-float distancesq(GEO::vec2 &p1,GEO::vec2 &p2) {
+float distance(GEO::vec2 &p1,GEO::vec2 &p2) {
     float res=0;
     for (int i=0;i<2;++i) {
         res += (p1[i]-p2[i])*(p1[i]-p2[i]);
     }
-    return res;
+    return std::sqrt(res);
 }
 
 std::unique_ptr<Graph> makeMorePoints(Graph &inputGraph, float const step) {
@@ -76,56 +76,58 @@ std::unique_ptr<Graph> makeMorePoints(Graph &inputGraph, float const step) {
      */
 
     std::set<std::pair<int, int>> visitedEdges;
-    auto out = std::make_unique<Graph>();
-    int currentVertex = 0;
-    int nextVertex = inputGraph.directAdjacency(currentVertex)[0];
+    std::unique_ptr<Graph> out = std::make_unique<Graph>();
+
+    for (auto p: inputGraph.getPoints()) {
+        out -> addPoint(p);
+    }
 
     //We compute the distance we went from the point on border, then we compare it to the distance to the point adjacent to this one.
     //Since we go in the same direction, if the distance squared is greater, then we went too far and must change vertex.
 
+    for (int currentVertex = 0; currentVertex < inputGraph.numVertex() ;++currentVertex) {
 
-    while (visitedEdges.find(std::make_pair(currentVertex, nextVertex)) == visitedEdges.end()) {
+        for (Neighbor nextVertex_N : inputGraph.directAdjacency(currentVertex)) {
+            int nextVertex = nextVertex_N.index;
+            if (visitedEdges.find(std::make_pair(currentVertex, nextVertex)) == visitedEdges.end()) {
 
-        //Three cases : if we are in the first iteration of the point, we simply add the point the the new graph
+                float distFromConnectedVertex = distance(out -> getPointCoordinate(currentVertex), out -> getPointCoordinate(nextVertex));
+                GEO::vec2 direction = ( out -> getPointCoordinate(nextVertex) - out -> getPointCoordinate(currentVertex));
 
-        out -> addPoint(inputGraph.getPointCoordinate(currentVertex));
-        float distFromConnectedVertex = distancesq(inputGraph.getPointCoordinate(currentVertex), inputGraph.getPointCoordinate(nextVertex));
-        GEO::vec2 direction = (inputGraph.getPointCoordinate(nextVertex) - inputGraph.getPointCoordinate(currentVertex));
+                //If we moved, we check the distance to the current point, to see if we aren't farther away than needed
 
-        //If we moved, we check the distance to the current point, to see if we aren't farther away than needed
+                //Step is here a density parameter (the density : step is to adjust globally to fit the project requirements)
+                int nStep = (int) ((distFromConnectedVertex)/(step)) + 1 ;
 
-        //Step is here a density parameter (the density : step is to adjust globally to fit the project requirements)
-        int nStep = std::sqrt(distFromConnectedVertex)/step;
 
-        for (int k=1;k<nStep;++k) {
-            out -> addPoint(inputGraph.getPointCoordinate(currentVertex) + direction*((float) k / (float) nStep));
+                //first vertex of the edge (which is a little different)
+                if (nStep == 1) {
+                                    out -> addEdge({currentVertex, nextVertex});
+                                }
+                else {
 
+                    out -> addPoint(inputGraph.getPointCoordinate(currentVertex) + direction/ (float) nStep);
+                    out -> addEdge({currentVertex, out -> numVertex() -1 });
+
+                    for (int k=2;k<nStep;++k) {
+
+                        out -> addPoint(inputGraph.getPointCoordinate(currentVertex) + direction*((float) k / (float) nStep));
+                        out -> addEdge({out -> numVertex()-1, out -> numVertex() - 2});
+
+                    }
+
+                    out -> addEdge({out -> numVertex() - 1, nextVertex });
+                }
+
+
+                //mark edge as visited
+                visitedEdges.emplace(currentVertex, nextVertex);
+                visitedEdges.emplace(nextVertex, currentVertex);
+
+            }
         }
-        //If we are too far, we change point. Since we need to always turn in the same direction, and points are disorganized, we need to check which direction
-        // is the right one, of course for the first point, the direction will be random.
-
-        visitedEdges.emplace(currentVertex, nextVertex);
-        visitedEdges.emplace(nextVertex, currentVertex);
-
-        if (visitedEdges.find(std::make_pair( nextVertex, inputGraph.directAdjacency(nextVertex)[0])) == visitedEdges.end()) {
-            //Change of points
-            currentVertex = nextVertex;
-            nextVertex = inputGraph.directAdjacency(nextVertex)[0];
-            //Refresh the data used
-
-        }
-        //Same here.
-        else if (visitedEdges.find(std::make_pair( nextVertex, inputGraph.directAdjacency(nextVertex)[1])) == visitedEdges.end()) {
-            currentVertex = nextVertex;
-            nextVertex = inputGraph.directAdjacency(nextVertex)[1];
-        }
-
-
     }
-    for (int i=0;i<out -> numVertex()-1;++i) {
-        out -> addEdge({i,i+1});
-    }
-    out -> addEdge({out->numVertex()-1,0});
+
 
     return std::move(out);
 
@@ -195,6 +197,9 @@ std::unique_ptr<Graph> extractVoronoi(Graph &inputGraph, std::set<std::pair<int,
 
             } else if(t2 >signed_index_t(t)) {
                 voronoiGraph ->addEdge({(int) t,(int)t2});
+                //If the edge exists, we put one of the closest point on the delaunay triangle, i.e the edge of delaunay who's dual it is.
+                voronoiGraph -> fixClosest(t,t2, inputGraph.getPointCoordinate(delaunay -> cell_to_v()[3*t + (e+1)%3]));
+
                 if(!out) {
                     intersects.emplace((int)t,(int)t2);
                     intersects.emplace((int)t2,(int)t);
@@ -254,26 +259,26 @@ std::map <std::pair<int,int>, bool> voronoiIntersection (Graph& inputGraph) {
 
 void depthSearch_outside(Graph & voronoiGraph,int previous, int next,  std::vector<bool> & visited, std::set <std::pair<int,int>> voronoiIntersection){
 
-    if  (voronoiGraph.getStatus(previous)==treatment(unknown) ) {
+    if  (voronoiGraph.getStatus(previous)==treatment::unknown ) {
         return;
     }
     (visited)[next]=true;
     //If the edge intersects the border we reverse status
     if (voronoiIntersection.find(std::pair<int,int>(previous,next)) != voronoiIntersection.end()) {
-        if (voronoiGraph.getStatus(previous)==treatment(outside)) {
-            voronoiGraph.changeStatus(next, treatment(inside));
+        if (voronoiGraph.getStatus(previous)==treatment::outside) {
+            voronoiGraph.changeStatus(next, treatment::inside);
         }
         else {
-            voronoiGraph.changeStatus(next, treatment(outside));
+            voronoiGraph.changeStatus(next, treatment::outside);
         }
     }
     //Else, we make it the stame
     else {
         voronoiGraph.changeStatus(next,voronoiGraph.getStatus(previous));
     }
-    for (int i:voronoiGraph.directAdjacency(next)) {
-        if (!((visited)[i])) {
-            depthSearch_outside(voronoiGraph,next,i, visited, voronoiIntersection);
+    for (Neighbor i:voronoiGraph.directAdjacency(next)) {
+        if (!((visited)[i.index])) {
+            depthSearch_outside(voronoiGraph,next,i.index, visited, voronoiIntersection);
         }
     }
 
@@ -292,13 +297,13 @@ void fixOutsidePoints(Graph &voronoiGraph, std::set <std::pair<int,int>> & voron
          //Get the list of points to begin with (might be only one, and can be empty)
          std::vector<int> initialPoints = {};
          for (int i=0;i<voronoiGraph.numVertex();++i) {
-             if (voronoiGraph.getStatus(i) !=treatment(unknown)) {
+             if (voronoiGraph.getStatus(i) !=treatment::unknown) {
                  initialPoints.push_back(i);
              }
          }
          for (int i:initialPoints) { //Parcourir sur TOUS les points et puis tester si outside ET not visited
-             for (int k:voronoiGraph.directAdjacency(i)) {
-                 depthSearch_outside(voronoiGraph,i,k,visited,voronoiIntersection);
+             for (Neighbor k:voronoiGraph.directAdjacency(i)) {
+                 depthSearch_outside(voronoiGraph,i,k.index,visited,voronoiIntersection);
              }
          }
      }

@@ -4,7 +4,7 @@
 namespace Medial{
 
 void savePoints(std::string filename, Graph &extPoints, Graph &intPoints) //Pour enregistrer les graphes dans un fichier texte
-{
+{/*
     std::ofstream ostrm(filename, std::ios::out);
     // Écriture des différentes lignes dans le fichier
     // Pour le graphe du contours extérieur
@@ -38,7 +38,7 @@ void savePoints(std::string filename, Graph &extPoints, Graph &intPoints) //Pour
     ostrm << intPoints.getInfiniteConnection().size() << "\n";
     foreach(const int &infiniteConnection, intPoints.getInfiniteConnection()){
         ostrm << infiniteConnection << "\n";
-    }
+    }*/
 }
 
 Graph loadPoints(std::string filename, bool externe){ //Pour charger les graphes à partir d'un fichier texte

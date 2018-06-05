@@ -15,6 +15,7 @@
 #include <fstream>
 #include <stdbool.h>
 #include <stdio.h>
+#include <functional>   // std::unary_function
 
 #include <cmath>
 #define PI 3.14159265
@@ -36,23 +37,28 @@ Graph::Graph() //Creates empty graph
  * matrix, you can change the boolean status to simply add the edge to the adjacency matrix
  * without any research
  */
-void Graph::addEdge(std::array<int,2> connexion /*, bool checkIfAlreadyPresent = true */)
+void Graph::addEdge(const std::array<int,2> & connexion /*, bool checkIfAlreadyPresent = true */)
 //adds an edge to the structure. By default, they work in both directions
 {
-    int from = connexion[0];
-    int to =  connexion[1];
-    assert(from<m_connexions.size());
-    assert(to<m_connexions.size());
+    struct Neighbor from = {.index = connexion[0], .closest=GEO::vec2(0,0)};
+    struct Neighbor to = {.index = connexion[1], .closest=GEO::vec2(0,0)};
+    assert(from.index<m_connexions.size());
+    assert(to.index<m_connexions.size());
 
-    if (std::find(m_connexions[from].begin(), m_connexions[from].end(), to )== m_connexions[from].end())
+    if (std::find_if(m_connexions[from.index].begin(), m_connexions[from.index].end(),
+                     std::not1(std::function<bool (Neighbor)>([&connexion](Neighbor i){ return i.index == connexion[1]; }))
+                        ) == m_connexions[from.index].end())
     {
-        m_connexions[from].push_back(to);
+        m_connexions[connexion[0]].push_back(to);
     }
 
 
-    if (std::find(m_connexions[to].begin(), m_connexions[to].end(), from )== m_connexions[to].end())
+    if (std::find_if(m_connexions[to.index].begin(), m_connexions[to.index].end(),
+                     std::not1(std::function<bool (Neighbor)>([&connexion](Neighbor i){ return i.index == connexion[0]; }))
+                        ) == m_connexions[to.index].end())
     {
-        m_connexions[to].push_back(from);
+        m_connexions[connexion[1]].push_back(from);
+
     }
     else {
         assert(false);
@@ -65,16 +71,27 @@ void Graph::addEdge(std::array<int,2> connexion /*, bool checkIfAlreadyPresent =
 
 }
 
-std::vector <int> Graph::directAdjacency(int v) {
+void Graph::fixClosest(int i, int j, GEO::vec2 close) {
+    m_connexions[i][j].closest = close;
+
+}
+
+std::vector <Neighbor> Graph::directAdjacency(int v) {
     return m_connexions[v];
+}
+
+
+
+std::map<std::pair<int,int>, int> Graph::getNeighbors() {
+    return m_neighbors;
 }
 
 
 void Graph::addPoint (const GEO::vec2 &point)
 {
     m_points.push_back(point);
-    m_connexions.push_back(std::vector<int>());
-    m_pointTreatment.push_back(treatment(unknown));
+    m_connexions.push_back(std::vector<Neighbor>());
+    m_pointTreatment.push_back(treatment::unknown);
 
 }
 
@@ -121,16 +138,17 @@ void Graph::writeToFile() {
      myfile.close();
 }
 
-const std::vector<std::vector<int> >& Graph::getConnexions() {
+const std::vector<std::vector<Neighbor> >& Graph::getConnexions() {
     return m_connexions;
 }
 
 bool Graph::existsEdge(int i, int k) const {
-    if (std::find(m_connexions[i].begin(), m_connexions[i].end(), k )== m_connexions[i].end())
-    {
-        return false;
-    }
-    if (std::find(m_connexions[k].begin(), m_connexions[k].end(), i )== m_connexions[k].end())
+    assert(i<m_connexions.size());
+    assert(k<m_connexions.size());
+
+    if (std::find_if(m_connexions[i].begin(), m_connexions[i].end(),
+                     std::not1(std::function<bool (Neighbor)>([k](Neighbor i){ return i.index == k; }))
+                        ) == m_connexions[i].end())
     {
         return false;
     }
@@ -149,14 +167,11 @@ treatment Graph::getStatus(int i) {
 
 void Graph::removeOutsidePoints(){
     std::map <int, int> oldToNewIndex;
-    GEO::vec2 storedPoint;
-    treatment storedTreatment;
-    std::vector <int>  storedConnexions;
     int i = 0;
     int j = numVertex()-1;
     int swapCount = 0;
     while (i<=j) {
-        if (getStatus(i) == treatment(inside)){
+        if (getStatus(i) == treatment::inside){
             //The point is to be kept, then we add its index to the table, if it hasn't been swaped, then it must stay in place, otherwise we put its old index
             if (swapCount == 0) {
                 oldToNewIndex.insert(std::pair<int,int> (i,i));
@@ -169,19 +184,14 @@ void Graph::removeOutsidePoints(){
         }
         else {
             //Change point coordinate
-            storedPoint = m_points[j];
-            m_points[j] = m_points[i];
-            m_points[i] = storedPoint;
+            std::swap(m_points[j], m_points[i]);
 
             //Change connexions
-            storedConnexions = m_connexions[j];
-            m_connexions[j] = m_connexions[i];
-            m_connexions[i] = storedConnexions;
+            std::swap(m_connexions[j], m_connexions[i]);
 
             //Change status
-            storedTreatment = m_pointTreatment[j];
-            m_pointTreatment[j] = m_pointTreatment[i];
-            m_pointTreatment[i] = storedTreatment;
+            std::swap(m_pointTreatment[j], m_pointTreatment[i]);
+
 
             ++swapCount;
             --j;
@@ -196,11 +206,12 @@ void Graph::removeOutsidePoints(){
     for (int k= 0; k<m_connexions.size();++k ) {
         int l =0;
         while (l<m_connexions[k].size()) {
-            if (oldToNewIndex.find(m_connexions[k][l]) == oldToNewIndex.end() ) {
+
+            if (oldToNewIndex.find(m_connexions[k][l].index) == oldToNewIndex.end() ) {
                 m_connexions[k].erase(m_connexions[k].begin() + l);
             }
             else {
-                m_connexions[k][l] = oldToNewIndex.find(m_connexions[k][l]) -> second;
+                m_connexions[k][l].index = oldToNewIndex.find(m_connexions[k][l].index) -> second;
                 ++l;
             }
 
