@@ -30,10 +30,10 @@ class Graph
 
 public:
     Graph();
-    void fixClosest(int i, int j, GEO::vec2 close);
+    void fixClosest(int i, int j, GEO::vec2 &close);
     std::map<std::pair<int,int>, int> getNeighbors();
     void addNeighbor(int i, int j, int pointIndex);
-    void addEdge(const std::array<int,2> & connexion );
+    void addEdge(const std::array<int,2> & connexion, bool checkIfAlreadyPresent=false );
     void addPoint (const GEO::vec2 &point);
     static std::unique_ptr <Graph> demoGraph(int n);
     std::vector<GEO::vec2> &getPoints();

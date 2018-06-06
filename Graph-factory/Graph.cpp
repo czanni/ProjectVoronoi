@@ -37,7 +37,7 @@ Graph::Graph() //Creates empty graph
  * matrix, you can change the boolean status to simply add the edge to the adjacency matrix
  * without any research
  */
-void Graph::addEdge(const std::array<int,2> & connexion /*, bool checkIfAlreadyPresent = true */)
+void Graph::addEdge(const std::array<int,2> & connexion, bool checkIfAlreadyPresent)
 //adds an edge to the structure. By default, they work in both directions
 {
     struct Neighbor from = {.index = connexion[0], .closest=GEO::vec2(0,0)};
@@ -45,24 +45,30 @@ void Graph::addEdge(const std::array<int,2> & connexion /*, bool checkIfAlreadyP
     assert(from.index<m_connexions.size());
     assert(to.index<m_connexions.size());
 
-    if (std::find_if(m_connexions[from.index].begin(), m_connexions[from.index].end(),
-                     std::not1(std::function<bool (Neighbor)>([&connexion](Neighbor i){ return i.index == connexion[1]; }))
-                        ) == m_connexions[from.index].end())
-    {
-        m_connexions[connexion[0]].push_back(to);
+    if (checkIfAlreadyPresent) {
+
+        if (std::find_if(m_connexions[from.index].begin(), m_connexions[from.index].end(),
+                         std::not1(std::function<bool (Neighbor)>([&connexion](Neighbor i){ return i.index == connexion[1]; }))
+                            ) == m_connexions[from.index].end())
+        {
+            m_connexions[connexion[0]].push_back(to);
+        }
+
+
+        if (std::find_if(m_connexions[to.index].begin(), m_connexions[to.index].end(),
+                         std::not1(std::function<bool (Neighbor)>([&connexion](Neighbor i){ return i.index == connexion[0]; }))
+                            ) == m_connexions[to.index].end())
+        {
+            m_connexions[connexion[1]].push_back(from);
+
+        }
     }
 
-
-    if (std::find_if(m_connexions[to.index].begin(), m_connexions[to.index].end(),
-                     std::not1(std::function<bool (Neighbor)>([&connexion](Neighbor i){ return i.index == connexion[0]; }))
-                        ) == m_connexions[to.index].end())
-    {
-        m_connexions[connexion[1]].push_back(from);
-
-    }
     else {
-        assert(false);
+        m_connexions[connexion[0]].push_back(to);
+        m_connexions[connexion[1]].push_back(from);
     }
+
   //END of checking if present
   /*  else {
         m_connexions[to].push_back(from);
@@ -71,7 +77,7 @@ void Graph::addEdge(const std::array<int,2> & connexion /*, bool checkIfAlreadyP
 
 }
 
-void Graph::fixClosest(int i, int j, GEO::vec2 close) {
+void Graph::fixClosest(int i, int j, GEO::vec2 & close) {
     for (Neighbor &N : m_connexions[i]){
         if (N.index == j) {
             N.closest = close;
@@ -152,13 +158,14 @@ bool Graph::existsEdge(int i, int k) const {
     assert(i<m_connexions.size());
     assert(k<m_connexions.size());
 
-    if (std::find_if(m_connexions[i].begin(), m_connexions[i].end(),
-                     std::not1(std::function<bool (Neighbor)>([k](Neighbor i){ return i.index == k; }))
-                        ) == m_connexions[i].end())
-    {
-        return false;
+    for (auto N : m_connexions[i]) {
+        if (N.index == k) {
+            return true;
+        }
     }
-    return true;
+    return false;
+
+
 }
 
 void Graph::changeStatus(int i, treatment T) {
