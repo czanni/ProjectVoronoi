@@ -276,7 +276,7 @@ void RenderArea::voronoiDiagram(){
     edgeIntersects = std::set <std::pair<int,int>> ();
     if (IsExterieurContours){
         Graph debug = Graph();
-        /*debug.addPoint({100,200});
+        debug.addPoint({100,200});
         debug.addPoint({200,100});
         debug.addPoint({300,200});
         debug.addPoint({200,300});
@@ -294,8 +294,8 @@ void RenderArea::voronoiDiagram(){
         debug.addEdge({5,6});
         debug.addEdge({6,7});
         debug.addEdge({7,2});
-        ContoursExterieur = debug;*/
-        ContoursExterieur = *GraphMaker::makeMorePoints(ContoursExterieur);
+        ContoursExterieur = debug;
+        //ContoursExterieur = *GraphMaker::makeMorePoints(ContoursExterieur);
 
         VoronoiExterieur = * GraphMaker::extractVoronoi(ContoursExterieur, edgeIntersects);
         GraphMaker::fixOutsidePoints(VoronoiExterieur, edgeIntersects);

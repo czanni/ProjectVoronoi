@@ -72,9 +72,15 @@ void Graph::addEdge(const std::array<int,2> & connexion /*, bool checkIfAlreadyP
 }
 
 void Graph::fixClosest(int i, int j, GEO::vec2 close) {
-    m_connexions[i][j].closest = close;
-
+    for (Neighbor &N : m_connexions[i]){
+        if (N.index == j) {
+            N.closest = close;
+            return;
+        }
+    return;
+    }
 }
+
 
 std::vector <Neighbor> Graph::directAdjacency(int v) {
     return m_connexions[v];

@@ -198,7 +198,10 @@ std::unique_ptr<Graph> extractVoronoi(Graph &inputGraph, std::set<std::pair<int,
             } else if(t2 >signed_index_t(t)) {
                 voronoiGraph ->addEdge({(int) t,(int)t2});
                 //If the edge exists, we put one of the closest point on the delaunay triangle, i.e the edge of delaunay who's dual it is.
-                voronoiGraph -> fixClosest(t,t2, inputGraph.getPointCoordinate(delaunay -> cell_to_v()[3*t + (e+1)%3]));
+                int closestPoint_i = delaunay -> cell_to_v()[3*t + (e+1)%3];
+                GEO::vec2 test = inputGraph.getPointCoordinate(closestPoint_i);
+                voronoiGraph -> fixClosest(t,t2, test);
+                voronoiGraph -> fixClosest(t2,t, inputGraph.getPointCoordinate(closestPoint_i));
 
                 if(!out) {
                     intersects.emplace((int)t,(int)t2);
