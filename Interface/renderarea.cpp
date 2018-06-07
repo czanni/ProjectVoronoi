@@ -249,6 +249,11 @@ void RenderArea::drawGraphV(Graph &graph, QPainter &painter){
             else {
                 painter.drawLine(pointsF[N.index], pointsF[index]);
             }
+            painter.setPen(QPen(QColor(230,230,250), 2));
+            if (N.closest[0] != 0 && N.closest[1] != 0) {
+                painter.drawLine(pointsF[N.index]/2 + pointsF[index]/2,ConvertVec2toQPointF({N.closest})[0] );
+            }
+            painter.setPen(QPen(Qt::green, 3));
         }
         index++;
     }

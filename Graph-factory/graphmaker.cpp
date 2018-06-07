@@ -206,6 +206,8 @@ std::unique_ptr<Graph> extractVoronoi(Graph &inputGraph, std::set<std::pair<int,
                 if(!out) {
                     intersects.emplace((int)t,(int)t2);
                     intersects.emplace((int)t2,(int)t);
+                    voronoiGraph -> fixClosest(t,t2, test);
+                    voronoiGraph -> fixClosest(t2,t, inputGraph.getPointCoordinate(closestPoint_i));
                 }
             }
         }

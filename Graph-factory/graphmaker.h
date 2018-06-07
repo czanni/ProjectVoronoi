@@ -27,7 +27,7 @@ typedef GEO::vector<GEO::vec2> Polygon;
 
     std::unique_ptr<Graph> extractMedialAxis(Graph & inputGraph);
     void removeOutsidePoints(std::unique_ptr<Graph> voronoiGraph);
-    std::unique_ptr<Graph> makeMorePoints(Graph &inputGraph, const float step=10);
+    std::unique_ptr<Graph> makeMorePoints(Graph &inputGraph, const float step=20);
     std::unique_ptr<Graph> extractVoronoi(Graph &inputGraph, std::set<std::pair<int,int>> &intersects);
     std::map <std::pair<int,int>, bool> voronoiIntersection (Graph& inputGraph);
     void fixOutsidePoints(Graph &inputGraph, std::set<std::pair<int, int> > &voronoiIntersection);
