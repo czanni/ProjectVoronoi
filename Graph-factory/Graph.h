@@ -1,45 +1,69 @@
 #ifndef GRAPH_H
 #define GRAPH_H
 
+#include "Delaunay_psm.h"
 
-#include <geogram_gfx/basic/GLSL.h>
-#include <geogram_gfx/basic/GL.h>
 #include <vector>
 #include <array>
 #include <memory>
-#include <stdbool.h>
-#include <stdio.h>
 
-
-enum treatment { inside, outside, unknown };
+enum class treatment { inside, outside, unknown };
+struct Neighbor {
+    int index;
+    GEO::vec2 closest;
+    bool intersect; //whether or not the edge intersect the surface
+};
 
 class Graph
 {
-    //TODO: marquer les fonctions et input en const s'ils ne sont pas modifiés
-    std::vector <std::vector <int> > m_connexions;
-    std::vector <GEO::vec2> m_points;
-    std::vector <int> infinite_connection;
-    std::vector <treatment> pointTreatment;
-
 public:
-    Graph();
-    void addEdge(std::array<int,2> connexion );
-    void addPoint (GEO::vec2 point);
-    static std::unique_ptr <Graph> demoGraph(int n);
-    std::vector<GEO::vec2> &getPoints();
+    Graph() = default;
+    
+    int numVertex() const {
+        return m_points.size();
+    }
+
+    std::vector<GEO::vec2> &getPositions() {
+        return m_points;
+    }
+    const std::vector<std::vector<Neighbor> >& getNeighbors() const {
+        return m_connexions;
+    }
+    const std::vector<Neighbor>& getNeighbors(int v) const {
+        return m_connexions[v];
+    }
+    const std::vector <int>& getInfiniteConnection() const {
+        return m_infiniteConnections;
+    }
+
+    void setIntersect(int i, int j);
+    bool intersect(int i, int j) const;
+
+    void addNeighbor(int i, int j, int pointIndex);
+    void addEdge(const std::array<int,2> & connexion, bool checkIfAlreadyPresent=false );
+    void addPoint (const GEO::vec2 &point);
     void addInfinite (GEO::index_t i);
-    void writeToFile();
-    int getSize();
-    std::vector <int> directAdjacency(int v);
-    const std::vector <std::vector <int> >& getConnexions();
-    const std::vector <int>& getInfiniteConnection();
-    GEO::vec2 & getPointCoordinate(int i);
+    GEO::vec2& getPointCoordinate(int i);
     bool existsEdge(int i, int k) const;
-    void changeStatus(int i, treatment T);
-    treatment getStatus(int i);
 
+    void fixClosest(int i, int j, const GEO::vec2 &point);
+    
+    void changeStatus(int i, treatment T) {
+        m_pointTreatment[i]=T;
+    }
+    treatment getStatus(int i) const {
+        return m_pointTreatment[i];
+    }
 
+    void removeOutsidePoints();
 
+protected:
+    std::vector <std::vector <Neighbor> > m_connexions;
+    std::vector <GEO::vec2> m_points;
+    std::vector <int> m_infiniteConnections;
+    std::vector <treatment> m_pointTreatment;
+public:
+    std::vector <bool> m_visited;
 };
 
 #endif // GRAPH_H
