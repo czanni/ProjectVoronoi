@@ -7,6 +7,8 @@
 
 namespace GraphMaker {
 
+	using GraphMaker::Graph;
+
     /**
      * @brief initialize initialize geogram, THIS FUNCTION MUST BE CALLED BEFORE ANY USE OF THE LIBRARY
      */
@@ -16,7 +18,7 @@ namespace GraphMaker {
      * Extract approximate version of the medial axis.
      * if density is zero do not subdivide paths, otherwise, use target density during subdivision
      */
-    std::unique_ptr<Graph> extractMedialAxis(ClipperLib::Paths& inputPath,
+    std::unique_ptr<Graph> extractMedialAxis(const ClipperLib::Paths& inputPath,
                                              float density=0.0f);
 
 

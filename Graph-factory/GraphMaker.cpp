@@ -10,6 +10,8 @@
 
 using namespace GEO;
 
+using namespace GraphMaker;
+
 typedef GEO::vector<GEO::vec2> Polygon;
 
 struct DelaunayHelper {
@@ -139,7 +141,7 @@ void initialize() {
 
 //[IN] the step (in arbitrary units, in function of the chosen unit in the Graph) of the cutting of the Graph, in order ot make it closer to a graph of segment.
 
-std::unique_ptr<Graph> extractVoronoi(ClipperLib::Paths &inputPath, float density)
+std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float density)
 {
     // Densify contour if need be and create vector of point at the same time
     
@@ -190,7 +192,7 @@ std::unique_ptr<Graph> extractVoronoi(ClipperLib::Paths &inputPath, float densit
     delaunayHelper.m_delaunay = Delaunay::create(2,"BDEL2d");
     delaunayHelper.m_delaunay->set_vertices(points.size(), &(points.data()->x));
 
-    //TODO : could directly build a simple graph (provided a fiew additionnal
+    //TODO : could directly build a simple graph (provided a few additionnal
     // data member are added (or passed as additional variable to function call)
     auto voronoiGraph = std::make_unique<Graph>();
         
@@ -286,7 +288,7 @@ void fixOutsidePoints(Graph &voronoiGraph)
 
 //------------------------------------------------------------------
 
-std::unique_ptr<Graph> extractMedialAxis(ClipperLib::Paths& inputPath,
+std::unique_ptr<Graph> extractMedialAxis(const ClipperLib::Paths& inputPath,
                                          float density)
 {
   std::unique_ptr<Graph> medialAxis = extractVoronoi(inputPath, density);

@@ -7,6 +7,8 @@
 #include <array>
 #include <memory>
 
+namespace GraphMaker {
+
 enum class treatment { inside, outside, unknown };
 struct Neighbor {
     int index;
@@ -65,5 +67,7 @@ protected:
 public:
     std::vector <bool> m_visited;
 };
+
+} // end of namespace GraphMaker
 
 #endif // GRAPH_H

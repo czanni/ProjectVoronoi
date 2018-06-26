@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <functional> // std::unary_function
 
+namespace GraphMaker {
+
 /**
  * Edges are stored in form of an adjacency matrix, as edges work in both ways,
  * They are added both ways in the adjacency matrix
@@ -171,3 +173,5 @@ void Graph::removeOutsidePoints(){
         }
     }
 }
+
+} // end of namespace GraphMaker

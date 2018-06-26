@@ -20,15 +20,24 @@ int SIZE_X = 640;
 int SIZE_Y = 480;
 
 int id = 0;
+int win;
+double zoom = 1.0;
 
 void display()
 {
+    if( slices[id].size() == 0 ) {
+        std::cout << "Slice " << id << " is empty." << std::endl;
+    }
     auto medial = GraphMaker::extractMedialAxis(slices[id],60);
 
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Set background color to black and opaque
     glClear(GL_COLOR_BUFFER_BIT);         // Clear the color buffer
 
     int index = 0;
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glScaled(zoom, zoom, 1.0);
 
     glBegin(GL_LINES);
     glColor3f(0.2f, 0.2f, 0.6f);
@@ -85,16 +94,36 @@ void display()
     glFlush();  // Render now
 }
 
-void processNormalKeys(unsigned char /*key*/, int /*xx*/, int /*yy*/) {
-  id=(id+1)%n_slices;
-  glutPostRedisplay() ;
+void processNormalKeys(unsigned char key, int /*xx*/, int /*yy*/) {
+    switch( key ) {
+        case 27: // Escape key
+            glutDestroyWindow(win);
+            exit (0);
+            break;
+        case '+':
+            zoom *= 1.414141414;
+            break;
+        case '-':
+            zoom /= 1.414141414;
+            break;
+        case 'b':
+            id=(id+n_slices-1)%n_slices;
+            break;
+        default:
+            id=(id+1)%n_slices;
+    }
+    glutPostRedisplay() ;
 }
 
 int main(int argc, char *argv[])
 {
     GraphMaker::initialize();
-    
-    std::string filename("../kitten-slices.txt");
+
+    std::string filename;
+    if( argc <= 1 )
+        filename = "../kitten-slices.txt";
+    else
+        filename = argv[1];
 //    std::string filename("../test_slice8_case1.txt");
 //    std::string filename("../test_slice8_case2.txt");
 //    std::string filename("../test_slice_square.txt");
@@ -122,8 +151,9 @@ int main(int argc, char *argv[])
 
     glutInit(&argc, argv);
     glutInitWindowSize(SIZE_X, SIZE_Y);
-    glutCreateWindow("Display slice medial axis");
+    win = glutCreateWindow("Display slice medial axis");
     glutDisplayFunc(display);
     glutKeyboardFunc(processNormalKeys);
+    glScalef(0.05f, 0.05f, 1.0f);
     glutMainLoop();
 }
