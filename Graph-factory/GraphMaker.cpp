@@ -154,7 +154,7 @@ bool hasEdge(const EdgeSet & s, Edge e)
 std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float density)
 {
     // Densify contour if need be and create vector of point at the same time
-    
+
     std::vector<GEO::vec2> points;
     EdgeSet edge;
     //todo : could reserve before ...
@@ -191,23 +191,27 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
         for(int i=nbPointPrev; i+1<nbPoint; ++i) {
             edge.emplace(i,i+1);
         }
-        edge.emplace(nbPointPrev,nbPoint-1);
+				if( nbPoint-1 > nbPointPrev )
+						edge.emplace(nbPointPrev,nbPoint-1);
 		}
 
 		DelaunayHelper delaunayHelper;
 		delaunayHelper.m_delaunay = Delaunay::create(2,"BDEL2d");
+		delaunayHelper.m_delaunay->set_keeps_infinite(true);
 		bool pointsWereAdded = true;
 		bool smallNonDelaunayEdgeRemain = false;
 		while( pointsWereAdded ) {
 				// Generate Delaunay triangulation
 				delaunayHelper.m_delaunay->set_vertices(points.size(), &(points.data()->x));
 				pointsWereAdded = false;
-				smallNonDelaunayEdgeRemain = false;
 				EdgeSet edgesFoundInDelaunay;
 				for(index_t t=0; t<delaunayHelper.m_delaunay->nb_cells(); ++t) {
 						for(index_t e=0; e<3; ++e) {
 								Edge ed = delaunayHelper.contourPoints(t,e);
-								if( ed.first > ed.second ) continue;
+								if( ed.first > ed.second ) {
+										//std::swap(ed.first, ed.second);
+										continue;
+								}
 								bool isBoundary = hasEdge(edge, ed);
 								if( isBoundary )
 										edgesFoundInDelaunay.insert(ed);
@@ -218,10 +222,12 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 								edgesFoundInDelaunay.begin(), edgesFoundInDelaunay.end(),
 								std::inserter(splittedEdges, splittedEdges.end()));
 				edge.swap(edgesFoundInDelaunay);
+				smallNonDelaunayEdgeRemain = false;
 				for( const Edge & e : splittedEdges ) {
+						//std::cerr << "Splitting " << e.first << ' ' << e.second << ' ' << points.size() << std::endl;
 						GEO::vec2 v0(delaunayHelper.m_delaunay->vertex_ptr(e.first));
 						GEO::vec2 v1(delaunayHelper.m_delaunay->vertex_ptr(e.second));
-						if( v0.distance2(v1) < 9.0 ) {
+						if( v0.distance2(v1) < 4.0 ) {
 								edge.insert(e);
 								smallNonDelaunayEdgeRemain = true;
 								continue;
@@ -234,28 +240,28 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 						edge.emplace(e.second, i);
 				}
 		}
-		//if( smallNonDelaunayEdgeRemain ) std::cerr << "At least one small non Delaunay edge remains...\n";
+		if( smallNonDelaunayEdgeRemain ) std::cerr << "At least one small non Delaunay edge remains...\n";
 
     //TODO : could directly build a simple graph (provided a few additionnal
     // data member are added (or passed as additional variable to function call)
     auto voronoiGraph = std::make_unique<Graph>();
         
     //We add the points in the Voronoi Graph
-    for(index_t t=0; t<delaunayHelper.m_delaunay->nb_cells(); ++t) {
+    for(index_t t=0; t<delaunayHelper.m_delaunay->nb_finite_cells(); ++t) {
         voronoiGraph -> addPoint(delaunayHelper.circumcenter(t));
         //Index in graph are the same as inb cell indexes in voronoi
     }
     
     //Then, we add the link corresponding to each cell
         
-    for(index_t t=0; t<delaunayHelper.m_delaunay->nb_cells(); ++t) {
+    for(index_t t=0; t<delaunayHelper.m_delaunay->nb_finite_cells(); ++t) {
         //function from display_edges
         for(index_t e=0; e<3; ++e) {
             signed_index_t t2 = delaunayHelper.m_delaunay->cell_to_cell()[3*t+e];
                 
             bool out = ! hasEdge(edge, delaunayHelper.contourPoints(t,e));
             
-            if(t2 == -1) {
+            if(delaunayHelper.m_delaunay->cell_is_infinite(t2)) {//(t2 == -1) {
                     voronoiGraph -> addInfinite(t); //add to the infinite matrix the vertex connected to the inf vertex.
                     if (out) {
                         voronoiGraph -> changeStatus(t,treatment::outside);
@@ -263,6 +269,7 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
                         voronoiGraph -> changeStatus(t,treatment::inside);
                     }
                 } else if(t2 >signed_index_t(t)) {
+										//std::cerr << "Neighbors " << t << ' ' << t2 << std::endl;
                     voronoiGraph ->addEdge({(int) t,(int)t2});
 
                     //If the edge exists, we put one of the closest point on the delaunay triangle, i.e the edge of delaunay who's dual it is.
