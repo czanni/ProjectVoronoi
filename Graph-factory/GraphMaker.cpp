@@ -296,29 +296,30 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 			vec2 e0(delaunayHelper.m_delaunay->vertex_ptr(ei.first));
 			vec2 e1(delaunayHelper.m_delaunay->vertex_ptr(ei.second));
 
-			vec2 u = normalize(e1 - e0);
-			//std::cerr << "\nLength u = " << length(u);
-			vec2 n = vec2(-u.y, u.x);
-			//std::cerr << "\nLength n = " << length(n);
-			double h = dot(f-e0, n);
-			if( h < 0.0 ) {
-				std::cerr << "BIZARRE";
-				exit(-1);
-				n = -n;
-				h = -h;
-			}
+			vec2 u = normalize(e1 - e0); //std::cerr << "\nLength u = " << length(u);
+			vec2 n = vec2(-u.y, u.x);  //std::cerr << "\nLength n = " << length(n);
 #if 1
 			vec2 r(f);
 			m = 0.5*(p+r);
-			while( std::abs(distance(m, f) - dot(m-e0,n)) > 0.5 ) {
-				if( distance(m, f) > dot(m-e0,n) ) {
+			double dd = dot(m-e0,n);
+			dd *= dd;
+			while( (distance2(p, r) > 0.0) && (std::abs(distance2(m, f) - dd) > 0.5) ) {
+				if( distance2(m, f) > dd ) {
 					p = m;
 				} else {
 					r = m;
 				}
 				m = 0.5*(p+r);
+				dd = dot(m-e0,n);
+				dd = dd*dd;
 			}
 #else
+			double h = dot(f-e0, n);
+			if( h < 0.0 ) {
+				std::cerr << "BIZARRE !";
+				n = -n;
+				h = -h;
+			}
 			// find the two boundary edges adjacent to f
 			Rotor r{t, (edgeOnTriangle+1)%3};
 			while( ! hasEdge(edge, delaunayHelper.contourPoints(r.cell, r.lv)) )
@@ -348,7 +349,8 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 
 			vec2 nl = normalize(left-f);
 			nl = vec2(-nl.y, nl.x);
-			{//if( dot(circ-f, nl) > 0.0 ) {
+			//if( dot(circ-f, nl) > 0.0 )
+			{
 					double nlx = dot(nl, u);
 					double nly = dot(nl, n);
 					double bound = 2.0*h*nlx / (1.0 - nly);
@@ -360,7 +362,8 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 
 			vec2 nr = normalize(f-right);
 			nr = vec2(-nr.y, nr.x);
-			{//if( dot(circ-f, nr) > 0.0 ) {
+			//if( dot(circ-f, nr) > 0.0 )
+			{
 					double nrx = dot(nr, u);
 					double nry = dot(nr, n);
 					double bound = 2.0*h*nrx / (1.0 - nry);
@@ -389,7 +392,7 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 							notFound = false;
 					}
 			}
-			if( notFound ) {//linBoundLeft <= x && x <= linBoundRight) {
+			if( notFound ) /*linBoundLeft <= x && x <= linBoundRight)*/ {
 					a = std::min(amax, (h + x*x/h)/2.0);
 			}
 			//if( a < amin ) std::cerr << "#";
