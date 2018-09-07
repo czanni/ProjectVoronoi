@@ -4,6 +4,7 @@
 #include "Delaunay_psm.h"
 
 #include <set>
+#include <stack>
 #include <algorithm>
 
 //---------------------------------------------------------
@@ -439,20 +440,32 @@ void depthSearch_outside(Graph & voronoiGraph,
                          int previous, int next,
                          std::vector<bool> & visited)
 {
-    visited[next]=true;
-    //If the edge intersects the border we reverse status
-    if (voronoiGraph.intersect(previous,next)) {
-        if (voronoiGraph.getStatus(previous)==treatment::outside) {
-            voronoiGraph.changeStatus(next, treatment::inside);
-        } else {
-            voronoiGraph.changeStatus(next, treatment::outside);
+    using namespace std;
+    stack<pair<int, int>> stack; 
+    while( true ) {
+        visited[next]=true;
+        //If the edge intersects the border we reverse status
+        if (voronoiGraph.intersect(previous,next)) {
+            if (voronoiGraph.getStatus(previous)==treatment::outside) {
+                voronoiGraph.changeStatus(next, treatment::inside);
+            } else {
+                voronoiGraph.changeStatus(next, treatment::outside);
+            }
+        } else { // we make it the same
+            voronoiGraph.changeStatus(next,voronoiGraph.getStatus(previous));
         }
-    } else { // we make it the same
-        voronoiGraph.changeStatus(next,voronoiGraph.getStatus(previous));
-    }
-    for (const auto &i : voronoiGraph.getNeighbors(next)) {
-        if (!(visited[i.index]) && voronoiGraph.getStatus(i.index)==treatment::unknown) {
-            depthSearch_outside(voronoiGraph,next,i.index, visited);
+        for (const auto &i : voronoiGraph.getNeighbors(next)) {
+            if (!(visited[i.index]) && voronoiGraph.getStatus(i.index)==treatment::unknown) {
+                stack.emplace(next, i.index);
+            }
+        }
+        while( true ) {
+            if( stack.empty() ) return;
+            previous = stack.top().first;
+            next = stack.top().second;
+            stack.pop();
+            if( visited[next] ) continue;
+            break;
         }
     }
 }
