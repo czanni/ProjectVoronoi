@@ -180,6 +180,23 @@ void initialize() {
 
 //------------------------------------------------------------------
 
+inline
+static
+double cautiousDistance(vec2 a, vec2 b) {
+	double dx = std::abs(a.x - b.x);
+	double dy = std::abs(a.y - b.y);
+	if( dy < dx ) {
+		std::swap(dx, dy);
+	}
+	// Here, 0 <= dx <= dy
+	if( dy > 1.0 ) {
+		double r = dx/dy; // r <= 1
+		return dy * sqrt(1.0 + r*r);
+	} else {
+		return sqrt(dx*dx+dy*dy);
+	}
+}
+
 void printPos(vec2 p, vec2 u, vec2 n) {
 		std::cerr << '<' << (dot(p,u)/30.0) << ", " << (dot(p,n)/30.0) << '>';
 }
@@ -187,12 +204,14 @@ void printPos(vec2 p, vec2 u, vec2 n) {
 //[IN] the step (in arbitrary units, in function of the chosen unit in the Graph) of the cutting of the Graph, in order ot make it closer to a graph of segment.
 std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float density)
 {
-	// Densify contour if need be and create vector of point at the same time
+	// Densify contour if need be and create vector of points at the same time
 
 	std::vector<GEO::vec2> points;
-	EdgeSet edge;
+	EdgeSet inputEdges;
 	//todo : could reserve before ...
 
+	// Prepare the set of input vertices |points| for Delaunay
+	// Also prepare the set of input edges |inputEdges|
 	for(auto &path : inputPath)
 	{
 		int nbPointPrev = points.size();
@@ -223,10 +242,10 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 
 		int nbPoint = points.size();
 		for(int i=nbPointPrev; i+1<nbPoint; ++i) {
-			edge.emplace(i,i+1);
+			inputEdges.emplace(i,i+1);
 		}
 		if( nbPoint-1 > nbPointPrev )
-			edge.emplace(nbPointPrev,nbPoint-1);
+			inputEdges.emplace(nbPointPrev,nbPoint-1);
 	}
 
 	DelaunayHelper delaunayHelper;
@@ -246,24 +265,22 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 					//std::swap(ed.first, ed.second);
 					continue;
 				}
-				bool isBoundary = hasEdge(edge, ed);
+				bool isBoundary = hasEdge(inputEdges, ed);
 				if( isBoundary )
 					edgesFoundInDelaunay.insert(ed);
 			}
 		}
 		EdgeSet splittedEdges;
-		std::set_difference(edge.begin(), edge.end(),
+		std::set_difference(inputEdges.begin(), inputEdges.end(),
 				edgesFoundInDelaunay.begin(), edgesFoundInDelaunay.end(),
 				std::inserter(splittedEdges, splittedEdges.end()));
-		edge.swap(edgesFoundInDelaunay);
+		inputEdges.swap(edgesFoundInDelaunay);
 		smallNonDelaunayEdges = 0;
-		//size_t nbNonDelaunay = splittedEdges.size();
 		for( const Edge & e : splittedEdges ) {
-			//std::cerr << "Splitting " << e.first << ' ' << e.second << ' ' << points.size() << std::endl;
 			GEO::vec2 v0(delaunayHelper.m_delaunay->vertex_ptr(e.first));
 			GEO::vec2 v1(delaunayHelper.m_delaunay->vertex_ptr(e.second));
-			if( (v0.distance2(v1) < 2.0) ) {//|| (nbNonDelaunay == -1) ) {
-				edge.insert(e);
+			if( (cautiousDistance(v0, v1) < 1.0) ) {
+				inputEdges.insert(e);
 				++smallNonDelaunayEdges;
 				continue;
 			} else {
@@ -271,9 +288,8 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 					GEO::vec2 middle = 0.5 * ( v0 + v1 );
 					size_t i = points.size();
 					points.push_back(middle);
-					edge.emplace(e.first, i);
-					edge.emplace(e.second, i);
-					//if( nbNonDelaunay == 2 ) nbNonDelaunay = -1;
+					inputEdges.emplace(e.first, i);
+					inputEdges.emplace(e.second, i);
 			}
 		}
 	}
@@ -286,117 +302,40 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 	//We add the points in the Voronoi Graph
 	for(index_t t=0; t<delaunayHelper.m_delaunay->nb_finite_cells(); ++t) {
 		const vec2 circ = delaunayHelper.circumcenter(t);
-		vec2 m, p;
-		m = p = circ;
-		int edgeOnTriangle = delaunayHelper.findBoundaryEdge(t, edge);
+		vec2 m = circ;
+		vec2 p, r;
+		int edgeOnTriangle = delaunayHelper.findBoundaryEdge(t, inputEdges);
 		if( edgeOnTriangle >= 0 ) {
 			auto ei = delaunayHelper.contourPoints(t, edgeOnTriangle);
 			auto fi = delaunayHelper.m_delaunay->cell_vertex(t, edgeOnTriangle);
-			vec2 f(delaunayHelper.m_delaunay->vertex_ptr(fi));
-			vec2 e0(delaunayHelper.m_delaunay->vertex_ptr(ei.first));
-			vec2 e1(delaunayHelper.m_delaunay->vertex_ptr(ei.second));
+			const vec2 f(delaunayHelper.m_delaunay->vertex_ptr(fi));
+			const vec2 e0(delaunayHelper.m_delaunay->vertex_ptr(ei.first));
+			const vec2 e1(delaunayHelper.m_delaunay->vertex_ptr(ei.second));
 
-			vec2 u = normalize(e1 - e0); //std::cerr << "\nLength u = " << length(u);
-			vec2 n = vec2(-u.y, u.x);  //std::cerr << "\nLength n = " << length(n);
+			const vec2 u = normalize(e1 - e0);
+			const vec2 n = vec2(-u.y, u.x); // in theory, |n| goes toward the interior of the triangle
 #if 1
-			vec2 r(f);
+			r = f; // vertex of triangle opposite the boundary edge
+			p = circ; // circumcenter
 			m = 0.5*(p+r);
-			double dd = dot(m-e0,n);
-			dd *= dd;
-			while( (distance2(p, r) > 0.0) && (std::abs(distance2(m, f) - dd) > 0.5) ) {
-				if( distance2(m, f) > dd ) {
+			double val_in_p = cautiousDistance(p, f) -  dot(p-e0,n);
+			double val_in_r = cautiousDistance(r, f) -  dot(r-e0,n);
+			double val_in_m = cautiousDistance(m, f) -  dot(m-e0,n);
+			int iter(20);
+			while( (iter > 0) && (val_in_p * val_in_r < 0.0) ) {
+				if( std::abs(val_in_m) < 1.0 ) break;
+				if( val_in_p * val_in_m > 0.0 ) {
 					p = m;
+					val_in_p = val_in_m;
 				} else {
 					r = m;
+					val_in_r = val_in_m;
 				}
 				m = 0.5*(p+r);
-				dd = dot(m-e0,n);
-				dd = dd*dd;
+				val_in_m = cautiousDistance(m, f) -  dot(m-e0,n);
+				--iter;
 			}
-#else
-			double h = dot(f-e0, n);
-			if( h < 0.0 ) {
-				std::cerr << "BIZARRE !";
-				n = -n;
-				h = -h;
-			}
-			// find the two boundary edges adjacent to f
-			Rotor r{t, (edgeOnTriangle+1)%3};
-			while( ! hasEdge(edge, delaunayHelper.contourPoints(r.cell, r.lv)) )
-				r = delaunayHelper.rotateRotorCCW(r);
-			Rotor l{t, (edgeOnTriangle+2)%3};
-			while( ! hasEdge(edge, delaunayHelper.contourPoints(l.cell, l.lv)) )
-				l = delaunayHelper.rotateRotorCW(l);
-
-			index_t lefti = delaunayHelper.m_delaunay->cell_vertex(l.cell, (l.lv+2)%3);
-			vec2 left(delaunayHelper.m_delaunay->vertex_ptr(lefti));
-			index_t righti = delaunayHelper.m_delaunay->cell_vertex(r.cell, (r.lv+1)%3);
-			vec2 right(delaunayHelper.m_delaunay->vertex_ptr(righti));
-			vec2 mid = 0.5*(e0+e1);
-
-			vec2 org = f - h*n;
-			/*std::cerr << "\ne0, e1, f, left, right ";
-					printPos(e0-org,u,n);
-					printPos(e1-org,u,n);
-					printPos(f-org,u,n);
-					printPos(left-org,u,n);
-					printPos(right-org,u,n);
-					*/
-
-			double linBoundLeft(-std::numeric_limits<double>::max());
-			bool leftOfLeft(true), rightOfRight(true);
-			double linBoundRight(+std::numeric_limits<double>::max());
-
-			vec2 nl = normalize(left-f);
-			nl = vec2(-nl.y, nl.x);
-			//if( dot(circ-f, nl) > 0.0 )
-			{
-					double nlx = dot(nl, u);
-					double nly = dot(nl, n);
-					double bound = 2.0*h*nlx / (1.0 - nly);
-					leftOfLeft = nlx < 0.0;
-					linBoundLeft = bound;
-					//std::cerr << "\nLeft: " << nlx << ' ' << nly << ' ' << linBoundLeft << ' ';
-					//printPos(left-f,u,n);
-			}
-
-			vec2 nr = normalize(f-right);
-			nr = vec2(-nr.y, nr.x);
-			//if( dot(circ-f, nr) > 0.0 )
-			{
-					double nrx = dot(nr, u);
-					double nry = dot(nr, n);
-					double bound = 2.0*h*nrx / (1.0 - nry);
-					rightOfRight = nrx >= 0.0;
-					linBoundRight = bound;
-				//	std::cerr << "\nRight: " << nrx << ' ' << nry << ' ' << linBoundRight << ' ';
-					//printPos(f-right,u,n);
-			}
-			double x = dot(mid-f, u);
-			//std::cerr << "\n[" << linBoundLeft << ' ' << linBoundRight << "] " << x;
-
-			double amin = dot(circ-mid, n);
-			double amax = (amin+distance(circ,f))/2.0;
-			bool notFound = true;
-			double a = std::numeric_limits<double>::max();
-			if( leftOfLeft == (x < linBoundLeft) ) {
-					double b = dot(mid-f,nl)/(1.0-dot(n, nl));
-					notFound = (b <= 0.0) || (b >= amax);
-					if( ! notFound )
-							a = b;
-			}
-			if( rightOfRight == (x > linBoundRight) ) {
-					double b = dot(mid-f,nr)/(1.0-dot(n, nr));
-					if( (b >= 0.0) && (b < amax) ) {
-							a = std::min(a, b);
-							notFound = false;
-					}
-			}
-			if( notFound ) /*linBoundLeft <= x && x <= linBoundRight)*/ {
-					a = std::min(amax, (h + x*x/h)/2.0);
-			}
-			//if( a < amin ) std::cerr << "#";
-			m = mid + a * n;
+			if( iter == 0 ) std::cerr << "  MANY ITERATIONS !";
 #endif
 		}
 		voronoiGraph -> addPoint(m);
@@ -410,7 +349,7 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 		for(index_t e=0; e<3; ++e) {
 			signed_index_t t2 = delaunayHelper.m_delaunay->cell_adjacent(t, e);
 
-			bool out = ! hasEdge(edge, delaunayHelper.contourPoints(t,e));
+			bool out = ! hasEdge(inputEdges, delaunayHelper.contourPoints(t,e));
 
 			if(delaunayHelper.m_delaunay->cell_is_infinite(t2)) {//(t2 == -1) {
 				voronoiGraph -> addInfinite(t); //add to the infinite matrix the vertex connected to the inf vertex.
