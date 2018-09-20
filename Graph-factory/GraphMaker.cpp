@@ -208,6 +208,7 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 
 	std::vector<GEO::vec2> points;
 	EdgeSet inputEdges;
+	std::set<int> badVertices; // the vertices adjacent to a boundary edge that is NOT in the Delaunay triangulation
 	//todo : could reserve before ...
 
 	// Prepare the set of input vertices |points| for Delaunay
@@ -276,20 +277,22 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 				std::inserter(splittedEdges, splittedEdges.end()));
 		inputEdges.swap(edgesFoundInDelaunay);
 		smallNonDelaunayEdges = 0;
+		badVertices.clear();
 		for( const Edge & e : splittedEdges ) {
 			GEO::vec2 v0(delaunayHelper.m_delaunay->vertex_ptr(e.first));
 			GEO::vec2 v1(delaunayHelper.m_delaunay->vertex_ptr(e.second));
 			if( (cautiousDistance(v0, v1) < 1.0) ) {
 				inputEdges.insert(e);
 				++smallNonDelaunayEdges;
-				continue;
+				badVertices.insert(e.first);
+				badVertices.insert(e.second);
 			} else {
-					pointsWereAdded = true;
-					GEO::vec2 middle = 0.5 * ( v0 + v1 );
-					size_t i = points.size();
-					points.push_back(middle);
-					inputEdges.emplace(e.first, i);
-					inputEdges.emplace(e.second, i);
+				pointsWereAdded = true;
+				GEO::vec2 middle = 0.5 * ( v0 + v1 );
+				size_t i = points.size();
+				points.push_back(middle);
+				inputEdges.emplace(e.first, i);
+				inputEdges.emplace(e.second, i);
 			}
 		}
 	}
@@ -303,6 +306,7 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 	for(index_t t=0; t<delaunayHelper.m_delaunay->nb_finite_cells(); ++t) {
 		const vec2 circ = delaunayHelper.circumcenter(t);
 		vec2 m = circ;
+#if 0
 		vec2 p, r;
 		int edgeOnTriangle = delaunayHelper.findBoundaryEdge(t, inputEdges);
 		if( edgeOnTriangle >= 0 ) {
@@ -314,7 +318,6 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 
 			const vec2 u = normalize(e1 - e0);
 			const vec2 n = vec2(-u.y, u.x); // in theory, |n| goes toward the interior of the triangle
-#if 1
 			r = f; // vertex of triangle opposite the boundary edge
 			p = circ; // circumcenter
 			m = 0.5*(p+r);
@@ -336,8 +339,8 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 				--iter;
 			}
 			if( iter == 0 ) std::cerr << "  MANY ITERATIONS !";
-#endif
 		}
+#endif
 		voronoiGraph -> addPoint(m);
 		//Index in graph are the same as inb cell indexes in voronoi
 	}
@@ -349,7 +352,8 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 		for(index_t e=0; e<3; ++e) {
 			signed_index_t t2 = delaunayHelper.m_delaunay->cell_adjacent(t, e);
 
-			bool out = ! hasEdge(inputEdges, delaunayHelper.contourPoints(t,e));
+			const auto edgeVertices = delaunayHelper.contourPoints(t,e);
+			bool out = ! hasEdge(inputEdges, edgeVertices);
 
 			if(delaunayHelper.m_delaunay->cell_is_infinite(t2)) {//(t2 == -1) {
 				voronoiGraph -> addInfinite(t); //add to the infinite matrix the vertex connected to the inf vertex.
@@ -360,6 +364,12 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 				}
 			} else if(t2 >signed_index_t(t)) {
 				//std::cerr << "Neighbors " << t << ' ' << t2 << std::endl;
+				if( (badVertices.end() != badVertices.find(edgeVertices.first))
+				 || (badVertices.end() != badVertices.find(edgeVertices.second)) ) {
+					// The actual boundary edge adjacent to one of these vertices is NOT in the
+					// Delaunay, so it is not reliable to propagate in/out data around here.
+					continue;
+				}
 				voronoiGraph ->addEdge({(int) t,(int)t2});
 
 				//If the edge exists, we put one of the closest point on the delaunay triangle, i.e the edge of delaunay who's dual it is.
@@ -368,7 +378,7 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 				voronoiGraph -> fixClosest(t2,t, points[closestPoint_i]);
 
 				if(!out) {
-					voronoiGraph->setIntersect((int)t,(int)t2);
+					voronoiGraph->setIntersect((int)t,(int)t2); // setIntersect() is bidirectional
 				}
 			}
 		}
@@ -416,26 +426,23 @@ void depthSearch_outside(Graph & voronoiGraph,
 
 void fixOutsidePoints(Graph &voronoiGraph)
 {
-     if (voronoiGraph.numVertex()>0) {
-         //As we will compute the search on different points and we don't want to visit each points several times, we store visited as a ptr
+	//As we will compute the search on different points and we don't want to visit each points several times, we store visited as a ptr
+	std::vector<bool> visited(voronoiGraph.numVertex(), false);
 
-         std::vector<bool> visited(voronoiGraph.numVertex(), false);
+	//Depth first search on outside points
+	//Get the list of points to begin with (might be only one, and can be empty)
 
-         //Depth first search on outside points
-         //Get the list of points to begin with (might be only one, and can be empty)
-         
-         for (int i=0;i<voronoiGraph.numVertex();++i)
-         {
-             if (!visited[i] && voronoiGraph.getStatus(i) != treatment::unknown)
-             {
-                 for (const auto &k:voronoiGraph.getNeighbors(i))
-                 {
-                    depthSearch_outside(voronoiGraph, i,k.index,visited);
-                 }
-             }
-         }
-     }
-    
+	for (int i=0;i<voronoiGraph.numVertex();++i)
+	{
+		if (!visited[i] && voronoiGraph.getStatus(i) != treatment::unknown)
+		{
+			for (const auto &k:voronoiGraph.getNeighbors(i))
+			{
+				depthSearch_outside(voronoiGraph, i,k.index,visited);
+			}
+		}
+	}
+
      voronoiGraph.removeOutsidePoints();
 }
 

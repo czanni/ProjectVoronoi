@@ -121,57 +121,47 @@ bool Graph::existsEdge(int i, int k) const {
 
 //TODO merge at the same time point the map to same integer coordinates!
 void Graph::removeOutsidePoints(){
-    std::map <int, int> oldToNewIndex;
-    int i = 0;
-    int j = numVertex()-1;
-    int swapCount = 0;
-    while (i<=j) {
-        if (getStatus(i) == treatment::inside){
-            //The point is to be kept, then we add its index to the table, if it hasn't been swaped, then it must stay in place, otherwise we put its old index
-            if (swapCount == 0) {
-                oldToNewIndex.insert(std::pair<int,int> (i,i));
-            }
-            else {
-                oldToNewIndex.insert(std::pair<int,int> (j+1,i));
-                swapCount = 0;
-            }
-            ++i;
-        }
-        else {
-            //Change point coordinate
-            std::swap(m_points[j], m_points[i]);
+	std::map <int, int> oldToNewIndex;
+	int i = 0;
+	int j = numVertex()-1;
+	int originalPos = 0;
+	while (i<=j) {
+		if (getStatus(i) == treatment::inside){
+			//The point is to be kept, then we add its index to the table
+			oldToNewIndex.insert(std::pair<int,int> (originalPos,i));
+			++i;
+			originalPos = i;
+		} else {
+			if( i < j ) {
+				//Change point coordinate
+				std::swap(m_points[j], m_points[i]);
+				//Change connexions
+				std::swap(m_connexions[j], m_connexions[i]);
+				//Change status
+				std::swap(m_pointTreatment[j], m_pointTreatment[i]);
+			}
+			originalPos = j;
+			--j;
+		}
+	}
 
-            //Change connexions
-            std::swap(m_connexions[j], m_connexions[i]);
+	m_points.resize(i);
+	m_connexions.resize(i);
+	m_pointTreatment.resize(i);
 
-            //Change status
-            std::swap(m_pointTreatment[j], m_pointTreatment[i]);
+	for (int k= 0; k<m_connexions.size();++k ) {
+		int l =0;
+		while (l<m_connexions[k].size()) {
+			const auto result = oldToNewIndex.find(m_connexions[k][l].index);
+			if (result == oldToNewIndex.end() ) {
+				m_connexions[k].erase(m_connexions[k].begin() + l);
+			} else {
+				m_connexions[k][l].index = result->second;
+				++l;
+			}
 
-
-            ++swapCount;
-            --j;
-        }
-    }
-
-    m_points.resize(i);
-    m_connexions.resize(i);
-    m_pointTreatment.resize(i);
-
-
-    for (int k= 0; k<m_connexions.size();++k ) {
-        int l =0;
-        while (l<m_connexions[k].size()) {
-
-            if (oldToNewIndex.find(m_connexions[k][l].index) == oldToNewIndex.end() ) {
-                m_connexions[k].erase(m_connexions[k].begin() + l);
-            }
-            else {
-                m_connexions[k][l].index = oldToNewIndex.find(m_connexions[k][l].index) -> second;
-                ++l;
-            }
-
-        }
-    }
+		}
+	}
 }
 
 } // end of namespace GraphMaker
