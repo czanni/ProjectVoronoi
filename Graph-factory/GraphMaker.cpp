@@ -296,7 +296,7 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 			}
 		}
 	}
-	if( smallNonDelaunayEdges > 0 ) std::cerr << "\n" << smallNonDelaunayEdges << " small boundary edges remain that are non-Delaunay.";
+	//if( smallNonDelaunayEdges > 0 ) std::cerr << "\n" << smallNonDelaunayEdges << " small boundary edges remain that are non-Delaunay.";
 
 	//TODO : could directly build a simple graph (provided a few additionnal
 	// data member are added (or passed as additional variable to function call)
