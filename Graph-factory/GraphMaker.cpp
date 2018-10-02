@@ -306,6 +306,11 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 	for(index_t t=0; t<delaunayHelper.m_delaunay->nb_finite_cells(); ++t) {
 		const vec2 circ = delaunayHelper.circumcenter(t);
 		vec2 m = circ;
+		if( std::isnan(m.x) || std::isnan(m.y) || (std::abs(m.x)>200000.0) || (std::abs(m.y)>200000.0) ) {
+			std::cerr << "Got a nan ! " << m.x << ' '<< m.y<<std::endl;
+			m.x = 200000.0;
+			m.y = 200000.0;
+		}
 #if 0
 		vec2 p, r;
 		int edgeOnTriangle = delaunayHelper.findBoundaryEdge(t, inputEdges);
@@ -353,11 +358,11 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 			signed_index_t t2 = delaunayHelper.m_delaunay->cell_adjacent(t, e);
 
 			const auto edgeVertices = delaunayHelper.contourPoints(t,e);
-			bool out = ! hasEdge(inputEdges, edgeVertices);
+			bool noBoundary = ! hasEdge(inputEdges, edgeVertices);
 
 			if(delaunayHelper.m_delaunay->cell_is_infinite(t2)) {//(t2 == -1) {
 				voronoiGraph -> addInfinite(t); //add to the infinite matrix the vertex connected to the inf vertex.
-				if (out) {
+				if( noBoundary ) {
 					voronoiGraph -> changeStatus(t,treatment::outside);
 				} else {
 					voronoiGraph -> changeStatus(t,treatment::inside);
@@ -377,7 +382,7 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 				voronoiGraph -> fixClosest(t,t2, points[closestPoint_i]);
 				voronoiGraph -> fixClosest(t2,t, points[closestPoint_i]);
 
-				if(!out) {
+				if( ! noBoundary ) {
 					voronoiGraph->setIntersect((int)t,(int)t2); // setIntersect() is bidirectional
 				}
 			}
@@ -424,7 +429,7 @@ void depthSearch_outside(Graph & voronoiGraph,
 
 //------------------------------------------------------------------
 
-void fixOutsidePoints(Graph &voronoiGraph)
+void propagateInOutInfo(Graph &voronoiGraph)
 {
 	//As we will compute the search on different points and we don't want to visit each points several times, we store visited as a ptr
 	std::vector<bool> visited(voronoiGraph.numVertex(), false);
@@ -442,8 +447,6 @@ void fixOutsidePoints(Graph &voronoiGraph)
 			}
 		}
 	}
-
-     voronoiGraph.removeOutsidePoints();
 }
 
 //------------------------------------------------------------------
@@ -452,8 +455,23 @@ std::unique_ptr<Graph> extractMedialAxis(const ClipperLib::Paths& inputPath,
                                          float density)
 {
   std::unique_ptr<Graph> medialAxis = extractVoronoi(inputPath, density);
-  fixOutsidePoints(*medialAxis);
+  propagateInOutInfo(*medialAxis);
+  medialAxis->keepOnlyPoints(GraphMaker::treatment::inside);
   return std::move(medialAxis);
+}
+
+//------------------------------------------------------------------
+
+std::pair<std::unique_ptr<Graph>, std::unique_ptr<Graph> >extractInsideOutsiteMedialAxes(
+		const ClipperLib::Paths & inputPath, float density)
+{
+  std::unique_ptr<Graph> medialAxis = extractVoronoi(inputPath, density);
+  propagateInOutInfo(*medialAxis);
+  std::unique_ptr<Graph> copy = std::make_unique<Graph>();
+  *copy = *medialAxis;
+  medialAxis->keepOnlyPoints(GraphMaker::treatment::inside);
+  copy->keepOnlyPoints(GraphMaker::treatment::outside);
+  return std::make_pair(std::move(medialAxis), std::move(copy));
 }
 
 //------------------------------------------------------------------

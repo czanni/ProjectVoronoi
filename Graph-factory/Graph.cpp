@@ -120,13 +120,13 @@ bool Graph::existsEdge(int i, int k) const {
 }
 
 //TODO merge at the same time point the map to same integer coordinates!
-void Graph::removeOutsidePoints(){
+void Graph::keepOnlyPoints(treatment t){
 	std::map <int, int> oldToNewIndex;
 	int i = 0;
 	int j = numVertex()-1;
 	int originalPos = 0;
 	while (i<=j) {
-		if (getStatus(i) == treatment::inside){
+		if( getStatus(i) == t ) {
 			//The point is to be kept, then we add its index to the table
 			oldToNewIndex.insert(std::pair<int,int> (originalPos,i));
 			++i;

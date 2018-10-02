@@ -20,16 +20,18 @@ namespace GraphMaker {
      */
     std::unique_ptr<Graph> extractMedialAxis(const ClipperLib::Paths& inputPath,
                                              float density=0.0f);
-
+    std::pair<std::unique_ptr<Graph>, std::unique_ptr<Graph> > extractInsideOutsiteMedialAxes(
+		    const ClipperLib::Paths & input, float density);
 
     template<typename GraphT>
     std::unique_ptr<GraphT>  copyGraph(Graph &graph)
     {
           auto res = std::make_unique<GraphT>();
+	  typedef ClipperLib::cInt cInt;
 
           for(const auto &p : graph.getPositions())
           {
-            res->addVertex(ClipperLib::IntPoint(static_cast<int>(p[0]), static_cast<int>(p[1])));
+            res->addVertex(ClipperLib::IntPoint(static_cast<cInt>(p[0]), static_cast<cInt>(p[1])));
           }
 
           int i=0;
@@ -38,7 +40,7 @@ namespace GraphMaker {
               for(const auto &n : connexions)
               {
                 res->addNeighbor(i, n.index,
-                                 ClipperLib::IntPoint(static_cast<int>(n.closest[0]), static_cast<int>(n.closest[1]))
+                                 ClipperLib::IntPoint(static_cast<cInt>(n.closest[0]), static_cast<cInt>(n.closest[1]))
                     );
               }
               ++i;

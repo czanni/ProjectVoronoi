@@ -57,7 +57,7 @@ public:
         return m_pointTreatment[i];
     }
 
-    void removeOutsidePoints();
+    void keepOnlyPoints(treatment t);
 
 protected:
     std::vector <std::vector <Neighbor> > m_connexions;
