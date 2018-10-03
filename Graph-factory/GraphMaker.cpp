@@ -307,7 +307,6 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 		const vec2 circ = delaunayHelper.circumcenter(t);
 		vec2 m = circ;
 		if( std::isnan(m.x) || std::isnan(m.y) || (std::abs(m.x)>1000000.0) || (std::abs(m.y)>1000000.0) ) {
-			std::cerr << "Got a nan ! " << m.x << ' '<< m.y<<std::endl;
 			m.x = 0.0;
 			m.y = 0.0;
 		}
@@ -468,13 +467,11 @@ std::pair<std::unique_ptr<Graph>, std::unique_ptr<Graph> >extractInsideOutsiteMe
   std::unique_ptr<Graph> medialAxis = extractVoronoi(inputPath, density);
   propagateInOutInfo(*medialAxis);
 
-  std::cerr << "PRECOPY";
   std::unique_ptr<Graph> copy = std::make_unique<Graph>(*medialAxis);
-  //*copy = *medialAxis;
-  std::cerr << "POSTCOPY";
 
-  medialAxis->keepOnlyPoints(GraphMaker::treatment::outside);
+  medialAxis->keepOnlyPoints(GraphMaker::treatment::inside);
   copy->keepOnlyPoints(GraphMaker::treatment::outside);
+
   return std::make_pair(std::move(medialAxis), std::move(copy));
 }
 
