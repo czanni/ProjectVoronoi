@@ -20,6 +20,7 @@ class Graph
 {
 public:
     Graph() = default;
+    Graph(const Graph &);
     
     int numVertex() const {
         return m_points.size();

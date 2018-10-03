@@ -27,25 +27,28 @@ namespace GraphMaker {
     std::unique_ptr<GraphT>  copyGraph(Graph &graph)
     {
           auto res = std::make_unique<GraphT>();
-	  typedef ClipperLib::cInt cInt;
+		typedef ClipperLib::cInt cInt;
 
-          for(const auto &p : graph.getPositions())
-          {
-            res->addVertex(ClipperLib::IntPoint(static_cast<cInt>(p[0]), static_cast<cInt>(p[1])));
-          }
+		//std::cerr << std::endl << "COPYING: ";
+		for(const auto &p : graph.getPositions())
+		{
+			ClipperLib::IntPoint cp(static_cast<cInt>(::round(p[0])), static_cast<cInt>(::round(p[1])));
+			res->addVertex(cp);
+			//std::cerr << '('<<p<< ") --> " << cp << "\n";
+		}
 
-          int i=0;
-          for(const auto &connexions : graph.getNeighbors())
-          {
-              for(const auto &n : connexions)
-              {
-                res->addNeighbor(i, n.index,
-                                 ClipperLib::IntPoint(static_cast<cInt>(n.closest[0]), static_cast<cInt>(n.closest[1]))
-                    );
-              }
-              ++i;
-          }
-
+		int i=0;
+		for(const auto &connexions : graph.getNeighbors())
+		{
+			for(const auto &n : connexions)
+			{
+				res->addNeighbor(i, n.index,
+						ClipperLib::IntPoint(static_cast<cInt>(::round(n.closest[0])), static_cast<cInt>(::round(n.closest[1])))
+						);
+			}
+			++i;
+		}
+		//std::cerr << std::endl;
           return res;
     }
 

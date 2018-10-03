@@ -115,8 +115,14 @@ bool Graph::existsEdge(int i, int k) const {
         }
     }
     return false;
+}
 
-
+Graph::Graph(const Graph & other) {
+	std::cerr << "Graph copy constructor";
+	m_connexions = other.m_connexions;
+	m_points = other.m_points;
+	m_infiniteConnections = other.m_infiniteConnections;
+	m_pointTreatment = other.m_pointTreatment;
 }
 
 //TODO merge at the same time point the map to same integer coordinates!

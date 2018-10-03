@@ -306,10 +306,10 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 	for(index_t t=0; t<delaunayHelper.m_delaunay->nb_finite_cells(); ++t) {
 		const vec2 circ = delaunayHelper.circumcenter(t);
 		vec2 m = circ;
-		if( std::isnan(m.x) || std::isnan(m.y) || (std::abs(m.x)>200000.0) || (std::abs(m.y)>200000.0) ) {
+		if( std::isnan(m.x) || std::isnan(m.y) || (std::abs(m.x)>1000000.0) || (std::abs(m.y)>1000000.0) ) {
 			std::cerr << "Got a nan ! " << m.x << ' '<< m.y<<std::endl;
-			m.x = 200000.0;
-			m.y = 200000.0;
+			m.x = 0.0;
+			m.y = 0.0;
 		}
 #if 0
 		vec2 p, r;
@@ -367,7 +367,7 @@ std::unique_ptr<Graph> extractVoronoi(const ClipperLib::Paths &inputPath, float 
 				} else {
 					voronoiGraph -> changeStatus(t,treatment::inside);
 				}
-			} else if(t2 >signed_index_t(t)) {
+			} else if( t2 > signed_index_t(t) ) {
 				//std::cerr << "Neighbors " << t << ' ' << t2 << std::endl;
 				if( (badVertices.end() != badVertices.find(edgeVertices.first))
 				 || (badVertices.end() != badVertices.find(edgeVertices.second)) ) {
@@ -456,7 +456,7 @@ std::unique_ptr<Graph> extractMedialAxis(const ClipperLib::Paths& inputPath,
 {
   std::unique_ptr<Graph> medialAxis = extractVoronoi(inputPath, density);
   propagateInOutInfo(*medialAxis);
-  medialAxis->keepOnlyPoints(GraphMaker::treatment::inside);
+  medialAxis->keepOnlyPoints(GraphMaker::treatment::outside);
   return std::move(medialAxis);
 }
 
@@ -467,9 +467,13 @@ std::pair<std::unique_ptr<Graph>, std::unique_ptr<Graph> >extractInsideOutsiteMe
 {
   std::unique_ptr<Graph> medialAxis = extractVoronoi(inputPath, density);
   propagateInOutInfo(*medialAxis);
-  std::unique_ptr<Graph> copy = std::make_unique<Graph>();
-  *copy = *medialAxis;
-  medialAxis->keepOnlyPoints(GraphMaker::treatment::inside);
+
+  std::cerr << "PRECOPY";
+  std::unique_ptr<Graph> copy = std::make_unique<Graph>(*medialAxis);
+  //*copy = *medialAxis;
+  std::cerr << "POSTCOPY";
+
+  medialAxis->keepOnlyPoints(GraphMaker::treatment::outside);
   copy->keepOnlyPoints(GraphMaker::treatment::outside);
   return std::make_pair(std::move(medialAxis), std::move(copy));
 }
