@@ -455,7 +455,7 @@ std::unique_ptr<Graph> extractMedialAxis(const ClipperLib::Paths& inputPath,
 {
   std::unique_ptr<Graph> medialAxis = extractVoronoi(inputPath, density);
   propagateInOutInfo(*medialAxis);
-  medialAxis->keepOnlyPoints(GraphMaker::treatment::outside);
+  medialAxis->keepOnlyPoints(GraphMaker::treatment::inside);
   return std::move(medialAxis);
 }
 
